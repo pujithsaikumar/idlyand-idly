@@ -1,0 +1,112 @@
+:root {
+  --font-heading: 'Fredoka', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  
+  --bg-gradient: linear-gradient(180deg, #FFFDF9 0%, #FFF8EE 100%);
+  --warm-gradient: linear-gradient(135deg, #FF6B00 0%, #FF8C00 100%);
+  --accent-gold: #D4AF37;
+  
+  --primary: #E65100;
+  --primary-hover: #BF360C;
+  --primary-light: #FFF3E0;
+  
+  --secondary: #F5EBE6;
+  --secondary-foreground: #4A3E3D;
+  
+  --card-bg: #FFFFFF;
+  --border-color: #EFE6DC;
+  
+  --text-main: #2D2424;
+  --text-muted: #7A6E6D;
+  
+  --shadow-soft: 0 4px 20px -2px rgba(230, 81, 0, 0.08);
+  --shadow-hover: 0 8px 30px -4px rgba(230, 81, 0, 0.16);
+  --shadow-modal: 0 20px 50px -10px rgba(0, 0, 0, 0.25);
+  
+  --radius-card: 18px;
+  --radius-pill: 9999px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg-gradient);
+  color: var(--text-main);
+  min-height: 100vh;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, .font-display {
+  font-family: var(--font-heading);
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+  transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.15s ease;
+}
+
+button:active {
+  transform: scale(0.96);
+}
+
+input, select, textarea {
+  font-family: inherit;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3px rgba(230, 81, 0, 0.15);
+}
+
+/* Animations & Effects */
+.card-lift {
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.card-lift:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-hover);
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-pop-in {
+  animation: popIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes popIn {
+  from { opacity: 0; transform: scale(0.94) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #FFFDF9;
+}
+::-webkit-scrollbar-thumb {
+  background: #E0D5C7;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #C4B5A5;
+}
