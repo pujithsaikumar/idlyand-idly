@@ -3,14 +3,11 @@ import { ShoppingBag, Phone, Sparkles, Star, Flame, ShieldCheck, ArrowRight, Zap
 import { useStore } from '../context/StoreContext';
 
 const RECENT_ORDERS = [
-  { hostel: 'Leaders Hostel', item: 'Mysore Bonda (2 pcs) + Vada (2 pcs)', time: '2m ago' },
-  { hostel: 'B3 Hostel', item: 'Ghee Karam Dosa', time: '4m ago' },
-  { hostel: 'Kings Hostel', item: 'Hyderabadi Chicken Dum Biryani', time: '6m ago' },
-  { hostel: 'Queens Hostel', item: 'Mysore Bonda (4 pcs)', time: '8m ago' },
-  { hostel: 'Prince Hostel', item: 'Onion Dosa + Medu Vada (2 pcs)', time: '10m ago' },
-  { hostel: 'Titans Hostel', item: 'Egg Biryani (Special)', time: '12m ago' },
-  { hostel: 'VVH Hostel', item: 'Ghee Sambar Idly (2 pcs)', time: '14m ago' },
-  { hostel: 'IGH Hostel', item: 'Masala Dosa + Medu Vada (2 pcs)', time: '16m ago' }
+  { name: 'Karthik', hostel: 'Leaders Hostel', item: 'Ghee Karam Dosa + Mysore Bonda', time: '2m ago' },
+  { name: 'Sanjay', hostel: 'B3 Hostel', item: 'Chicken Fry Piece Biryani', time: '4m ago' },
+  { name: 'Deepak', hostel: 'Kings Hostel', item: 'Punugulu + Mirchi Bajji', time: '7m ago' },
+  { name: 'Ananya', hostel: 'Queens Hostel', item: 'Medu Vada + Masala Dosa', time: '9m ago' },
+  { name: 'Vamsi', hostel: 'VVH Hostel', item: 'Hyderabadi Chicken Dum Biryani', time: '11m ago' }
 ];
 
 export default function Hero() {
@@ -219,7 +216,7 @@ export default function Hero() {
           }} />
           <div style={{ fontSize: '0.75rem', minWidth: 0, overflow: 'hidden' }}>
             <p style={{ fontWeight: 700, color: '#FFE0B2', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              ⚡ Live Order · {currentOrder.hostel}:
+              ⚡ {currentOrder.name} ({currentOrder.hostel}):
             </p>
             <p style={{ color: '#E0D5C7', fontSize: '0.7rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {currentOrder.item} · <span style={{ color: '#D4AF37' }}>{currentOrder.time}</span>
