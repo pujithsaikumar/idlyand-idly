@@ -2,10 +2,12 @@ import React from 'react';
 import { ShoppingBag, Store, Clock, Sparkles } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
+import { useStore } from '../context/StoreContext';
 
 export default function Header() {
   const { totalItemCount, total, setIsCartOpen, activeTrackingOrderId } = useCart();
   const { isAuthenticated, isStaffViewActive, setIsStaffViewActive, setIsStaffModalOpen } = useAuth();
+  const { isStoreOpen, announcementText } = useStore();
 
   const handleRestaurantClick = (e) => {
     e.preventDefault();
@@ -46,13 +48,13 @@ export default function Header() {
           width: '6px',
           height: '6px',
           borderRadius: '50%',
-          backgroundColor: '#4CAF50',
-          boxShadow: '0 0 6px #4CAF50',
+          backgroundColor: isStoreOpen ? '#4CAF50' : '#FF5252',
+          boxShadow: isStoreOpen ? '0 0 6px #4CAF50' : '0 0 6px #FF5252',
           flexShrink: 0
         }} />
-        <span>KITCHEN LIVE</span>
+        <span>{isStoreOpen ? 'KITCHEN LIVE' : 'KITCHEN CURRENTLY CLOSED'}</span>
         <span style={{ opacity: 0.4 }}>•</span>
-        <span style={{ color: '#D4AF37' }}>Free Hostel Delivery ≥ ₹100</span>
+        <span style={{ color: '#D4AF37' }}>{announcementText}</span>
       </div>
 
       <div style={{
@@ -153,7 +155,7 @@ export default function Header() {
             }}
           >
             <Store size={13} />
-            <span>{isStaffViewActive ? 'Exit' : isAuthenticated ? 'Kitchen' : 'Staff'}</span>
+            <span>{isStaffViewActive ? 'Exit' : isAuthenticated ? 'Admin' : 'Staff'}</span>
           </button>
 
           {/* Live Order Tracker Trigger (if user has active order) */}

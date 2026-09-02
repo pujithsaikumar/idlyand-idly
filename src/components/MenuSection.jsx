@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { Plus, Minus, Star } from 'lucide-react';
+import { Plus, Minus, Star, AlertCircle } from 'lucide-react';
 import { MENU_CATEGORIES } from '../data/menuData';
 import { useCart } from '../context/CartContext';
+import { useStore } from '../context/StoreContext';
 
 export default function MenuSection() {
   const { cartItems, addToCart, updateQuantity } = useCart();
+  const { getItemPrice, isItemOutOfStock, isStoreOpen } = useStore();
   const [activeCategory, setActiveCategory] = useState(MENU_CATEGORIES[0].id);
 
   const getItemQuantity = (id) => {
@@ -65,6 +67,24 @@ export default function MenuSection() {
         }}>
           Made fresh upon order. Includes signature chutneys &amp; sambar. Packaging: ₹5/tiffin, ₹10/biryani.
         </p>
+
+        {!isStoreOpen && (
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            backgroundColor: '#FFEBEE',
+            border: '1px solid #FFCDD2',
+            color: '#C62828',
+            padding: '8px 16px',
+            borderRadius: 'var(--radius-pill)',
+            fontSize: '0.85rem',
+            fontWeight: 700,
+            marginTop: '12px'
+          }}>
+            <AlertCircle size={16} /> Kitchen is currently closed for prep and will reopen soon!
+          </div>
+        )}
       </div>
 
       {/* Sticky Luxury Category Tabs */}
@@ -175,6 +195,8 @@ export default function MenuSection() {
             }}>
               {category.items.map(item => {
                 const qty = getItemQuantity(item.id);
+                const currentPrice = getItemPrice(item);
+                const isOutOfStock = isItemOutOfStock(item.id);
                 const badgeStyle = getBadgeStyle(item.badgeType);
 
                 return (
@@ -186,18 +208,31 @@ export default function MenuSection() {
                       flexDirection: 'column',
                       justifyContent: 'space-between',
                       borderRadius: 'var(--radius-card)',
-                      border: '1px solid var(--border-color)',
-                      backgroundColor: 'var(--card-bg)',
+                      border: `1px solid ${isOutOfStock ? '#E0E0E0' : 'var(--border-color)'}`,
+                      backgroundColor: isOutOfStock ? '#FAFAFA' : 'var(--card-bg)',
                       padding: '14px 16px',
                       boxShadow: 'var(--shadow-soft)',
                       position: 'relative',
-                      overflow: 'hidden'
+                      overflow: 'hidden',
+                      opacity: isOutOfStock ? 0.75 : 1
                     }}
                   >
                     <div>
                       {/* Card Top Row: Badge & Rating */}
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                        {item.badge ? (
+                        {isOutOfStock ? (
+                          <span style={{
+                            backgroundColor: '#FFEBEE',
+                            color: '#C62828',
+                            fontSize: '0.7rem',
+                            fontWeight: 800,
+                            padding: '2px 7px',
+                            borderRadius: '6px',
+                            border: '1px solid #FFCDD2'
+                          }}>
+                            SOLD OUT
+                          </span>
+                        ) : item.badge ? (
                           <span style={{
                             ...badgeStyle,
                             fontSize: '0.7rem',
@@ -289,17 +324,21 @@ export default function MenuSection() {
                           Price
                         </span>
                         <span style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-main)' }}>
-                          ₹{item.price}
+                          ₹{currentPrice}
                         </span>
                       </div>
 
                       {/* Quantity Action */}
                       <div>
-                        {qty === 0 ? (
+                        {isOutOfStock ? (
+                          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#C62828' }}>
+                            Unavailable
+                          </span>
+                        ) : qty === 0 ? (
                           <button
                             type="button"
                             aria-label={`Add ${item.name}`}
-                            onClick={() => addToCart(item)}
+                            onClick={() => addToCart({ ...item, price: currentPrice })}
                             style={{
                               display: 'inline-flex',
                               alignItems: 'center',

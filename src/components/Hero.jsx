@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ShoppingBag, Phone, Sparkles, Star, Flame, ShieldCheck, ArrowRight, Zap } from 'lucide-react';
+import { useStore } from '../context/StoreContext';
 
 const RECENT_ORDERS = [
   { name: 'Karthik', hostel: 'Leaders Hostel', item: 'Ghee Karam Dosa + Mysore Bonda', time: '2m ago' },
@@ -10,6 +11,7 @@ const RECENT_ORDERS = [
 ];
 
 export default function Hero() {
+  const { deliveryTimeEstimate, isStoreOpen } = useStore();
   const [tickerIndex, setTickerIndex] = useState(0);
 
   useEffect(() => {
@@ -82,7 +84,7 @@ export default function Hero() {
             WebkitTextFillColor: 'transparent',
             display: 'inline-block'
           }}>
-            Delivered in 20 Mins.
+            Delivered in {deliveryTimeEstimate}.
           </span>
         </h1>
 
@@ -113,19 +115,19 @@ export default function Hero() {
               alignItems: 'center',
               justifyContent: 'center',
               gap: '8px',
-              backgroundColor: 'var(--primary)',
+              backgroundColor: isStoreOpen ? 'var(--primary)' : '#757575',
               color: '#FFFFFF',
               padding: '12px 24px',
               borderRadius: 'var(--radius-pill)',
               fontWeight: 700,
               fontSize: '0.925rem',
               textDecoration: 'none',
-              boxShadow: '0 6px 20px rgba(230, 74, 25, 0.35)',
+              boxShadow: isStoreOpen ? '0 6px 20px rgba(230, 74, 25, 0.35)' : 'none',
               flex: '1 1 auto',
               minWidth: '180px'
             }}
           >
-            <ShoppingBag size={17} /> Explore Menu
+            <ShoppingBag size={17} /> {isStoreOpen ? 'Explore Menu & Order' : 'View Menu (Closed)'}
             <ArrowRight size={15} />
           </a>
 
@@ -164,7 +166,7 @@ export default function Hero() {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-main)' }}>
             <Zap size={14} color="#E64A19" />
-            <span>20–25 Min Express</span>
+            <span>{deliveryTimeEstimate} Delivery</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-main)' }}>
             <Sparkles size={14} color="#D4AF37" />

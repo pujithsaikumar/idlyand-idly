@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
-import { X, CreditCard, Banknote, ShieldCheck, AlertCircle, Loader2, QrCode, Copy, Check } from 'lucide-react';
+import { X, CreditCard, Banknote, ShieldCheck, AlertCircle, Loader2, QrCode, Copy, Check, Power } from 'lucide-react';
 import { HOSTEL_LIST } from '../data/menuData';
 import { useCart } from '../context/CartContext';
+import { useStore } from '../context/StoreContext';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 const HOTEL_UPI_ID = 'idlyandidly@ybl'; // Hotel UPI VPA ID
 
 export default function OrderCheckoutModal({ isOpen, onClose, onOrderPlaced }) {
   const { cartItems, subtotal, parcelFee, deliveryFee, total, clearCart, setActiveTrackingOrderId, setSelectedHostel } = useCart();
+  const { isStoreOpen } = useStore();
 
   const [customerName, setCustomerName] = useState('');
   const [phone, setPhone] = useState('');
@@ -29,6 +31,11 @@ export default function OrderCheckoutModal({ isOpen, onClose, onOrderPlaced }) {
   };
 
   const validateForm = () => {
+    if (!isStoreOpen) {
+      setErrorMessage('Kitchen is currently closed and not accepting new orders right now.');
+      return false;
+    }
+
     if (!customerName.trim()) {
       setErrorMessage('Customer name is required.');
       return false;
@@ -151,6 +158,26 @@ export default function OrderCheckoutModal({ isOpen, onClose, onOrderPlaced }) {
             <X size={18} />
           </button>
         </div>
+
+        {/* Closed Store Warning */}
+        {!isStoreOpen && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            backgroundColor: '#FFEBEE',
+            color: '#C62828',
+            padding: '12px 16px',
+            borderRadius: '14px',
+            fontSize: '0.85rem',
+            fontWeight: 700,
+            marginBottom: '16px',
+            border: '1px solid #FFCDD2'
+          }}>
+            <Power size={18} />
+            <span>Kitchen is currently CLOSED for food prep. Orders cannot be submitted right now.</span>
+          </div>
+        )}
 
         {/* Error Alert */}
         {errorMessage && (
@@ -415,11 +442,11 @@ export default function OrderCheckoutModal({ isOpen, onClose, onOrderPlaced }) {
           {/* Submit Button */}
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !isStoreOpen}
             style={{
               marginTop: '8px',
               width: '100%',
-              backgroundColor: 'var(--primary)',
+              backgroundColor: isStoreOpen ? 'var(--primary)' : '#9E9E9E',
               color: '#FFFFFF',
               padding: '14px',
               borderRadius: 'var(--radius-pill)',
@@ -429,14 +456,17 @@ export default function OrderCheckoutModal({ isOpen, onClose, onOrderPlaced }) {
               alignItems: 'center',
               justifyContent: 'center',
               gap: '8px',
-              boxShadow: '0 4px 14px rgba(230, 81, 0, 0.35)',
-              opacity: loading ? 0.7 : 1
+              boxShadow: isStoreOpen ? '0 4px 14px rgba(230, 74, 25, 0.35)' : 'none',
+              opacity: loading ? 0.7 : 1,
+              cursor: isStoreOpen ? 'pointer' : 'not-allowed'
             }}
           >
             {loading ? (
               <>
                 <Loader2 size={18} className="animate-spin" /> Processing Order...
               </>
+            ) : !isStoreOpen ? (
+              'Kitchen Closed (Cannot Place Order)'
             ) : (
               <>
                 <ShieldCheck size={20} />

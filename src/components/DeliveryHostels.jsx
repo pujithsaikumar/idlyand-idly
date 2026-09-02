@@ -1,8 +1,11 @@
 import React from 'react';
 import { MapPin, Bike, Phone, Clock, ShieldCheck, Zap } from 'lucide-react';
 import { HOSTEL_LIST } from '../data/menuData';
+import { useStore } from '../context/StoreContext';
 
 export default function DeliveryHostels() {
+  const { deliveryTimeEstimate } = useStore();
+
   return (
     <section id="hostels" style={{
       maxWidth: '1080px',
@@ -91,7 +94,7 @@ export default function DeliveryHostels() {
                 alignItems: 'center',
                 gap: '3px'
               }}>
-                <Zap size={11} /> 15-20m
+                <Zap size={11} /> {deliveryTimeEstimate.split(' ')[0]}
               </span>
             </div>
           );
@@ -129,7 +132,7 @@ export default function DeliveryHostels() {
           </div>
           <div>
             <p style={{ fontSize: '1.15rem', fontWeight: 800, color: '#FFE0B2' }}>
-              ⚡ 100% FREE Hostel Delivery on orders ₹100+
+              ⚡ 100% FREE Hostel Delivery on orders ₹100+ ({deliveryTimeEstimate})
             </p>
             <p style={{ fontSize: '0.85rem', color: '#D2C3B7', marginTop: '2px' }}>
               Orders below ₹100: ₹20 for VVH &amp; IGH, ₹10 for Leaders, B3, Kings, Prince, Titans &amp; Queens.

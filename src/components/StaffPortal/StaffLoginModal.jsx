@@ -5,8 +5,8 @@ import { useAuth } from '../../context/AuthContext';
 export default function StaffLoginModal() {
   const { isStaffModalOpen, setIsStaffModalOpen, loginStaff } = useAuth();
 
-  const [email, setEmail] = useState('staff@idlyandidly.com');
-  const [password, setPassword] = useState('Staff@123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -32,26 +32,26 @@ export default function StaffLoginModal() {
       zIndex: 130,
       display: 'grid',
       placeItems: 'center',
-      backgroundColor: 'rgba(0, 0, 0, 0.6)',
+      backgroundColor: 'rgba(0, 0, 0, 0.65)',
       backdropFilter: 'blur(4px)',
       padding: '16px'
     }}>
       <div style={{
         backgroundColor: '#FFFFFF',
         width: '100%',
-        maxWidth: '420px',
+        maxWidth: '400px',
         borderRadius: '24px',
         boxShadow: 'var(--shadow-modal)',
-        padding: '28px',
+        padding: '24px',
         position: 'relative'
       }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
           <div>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary)', textTransform: 'uppercase' }}>
-              Staff Access Only
+            <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Authorized Staff Only
             </span>
-            <h3 style={{ fontSize: '1.35rem', fontWeight: 700, color: 'var(--text-main)' }}>
+            <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-main)' }}>
               Restaurant Portal Login
             </h3>
           </div>
@@ -90,7 +90,7 @@ export default function StaffLoginModal() {
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '4px' }}>
+            <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 700, marginBottom: '4px' }}>
               Staff Email Address
             </label>
             <div style={{ position: 'relative' }}>
@@ -98,6 +98,7 @@ export default function StaffLoginModal() {
               <input
                 type="email"
                 required
+                placeholder="staff@idlyandidly.com"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 style={{
@@ -113,7 +114,7 @@ export default function StaffLoginModal() {
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '4px' }}>
+            <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 700, marginBottom: '4px' }}>
               Staff Password
             </label>
             <div style={{ position: 'relative' }}>
@@ -121,6 +122,7 @@ export default function StaffLoginModal() {
               <input
                 type="password"
                 required
+                placeholder="••••••••"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 style={{
@@ -135,39 +137,26 @@ export default function StaffLoginModal() {
             </div>
           </div>
 
-          <div style={{
-            backgroundColor: '#FFF3E0',
-            padding: '10px 12px',
-            borderRadius: '10px',
-            fontSize: '0.78rem',
-            color: '#E65100',
-            lineHeight: 1.4
-          }}>
-            🔑 <strong>Default Staff Credentials:</strong><br />
-            Email: <code>staff@idlyandidly.com</code><br />
-            Password: <code>Staff@123</code>
-          </div>
-
           <button
             type="submit"
             disabled={loading}
             style={{
-              marginTop: '8px',
+              marginTop: '6px',
               width: '100%',
               backgroundColor: 'var(--primary)',
               color: '#FFFFFF',
               padding: '12px',
               borderRadius: 'var(--radius-pill)',
-              fontSize: '0.95rem',
+              fontSize: '0.925rem',
               fontWeight: 700,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: '8px',
-              boxShadow: '0 4px 14px rgba(230, 81, 0, 0.35)'
+              boxShadow: '0 4px 14px rgba(230, 74, 25, 0.35)'
             }}
           >
-            {loading ? <Loader2 size={18} className="animate-spin" /> : 'Authenticate & Open Dashboard'}
+            {loading ? <Loader2 size={18} className="animate-spin" /> : 'Log In to Dashboard'}
           </button>
         </form>
       </div>
