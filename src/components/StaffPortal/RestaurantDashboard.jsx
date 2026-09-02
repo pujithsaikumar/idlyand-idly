@@ -204,6 +204,8 @@ export default function RestaurantDashboard() {
     document.body.removeChild(link);
   };
 
+  const isAdmin = staffUser?.role === 'admin';
+
   return (
     <div style={{
       maxWidth: '1100px',
@@ -229,7 +231,7 @@ export default function RestaurantDashboard() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Management Portal
+              {isAdmin ? '👑 Executive Admin Portal' : '🍳 Kitchen Staff Portal'}
             </span>
             <span style={{
               backgroundColor: isStoreOpen ? '#E8F5E9' : '#FFEBEE',
@@ -247,10 +249,10 @@ export default function RestaurantDashboard() {
             </span>
           </div>
           <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>
-            Idly &amp; Idly Staff &amp; Admin Dashboard
+            {isAdmin ? 'Admin Management & Operations Dashboard' : 'Hostel Live Orders & Kitchen Dispatch'}
           </h2>
           <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-            Logged in as <strong>{staffUser?.email || 'Staff User'}</strong> ({staffUser?.role || 'Admin'})
+            Logged in as <strong>{staffUser?.email}</strong> ({isAdmin ? 'Full Administrator' : 'Kitchen Staff'})
           </p>
         </div>
 
@@ -296,99 +298,101 @@ export default function RestaurantDashboard() {
         </div>
       </div>
 
-      {/* Main Mode Navigation Tabs (Orders / Analytics / Settings) */}
-      <div style={{
-        display: 'flex',
-        gap: '8px',
-        backgroundColor: '#FFFFFF',
-        padding: '6px',
-        borderRadius: '16px',
-        border: '1px solid var(--border-color)',
-        boxShadow: 'var(--shadow-soft)',
-        marginBottom: '24px',
-        overflowX: 'auto'
-      }} className="no-scrollbar">
-        <button
-          type="button"
-          onClick={() => setActiveMainTab('orders')}
-          style={{
-            flex: 1,
-            minWidth: '160px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-            padding: '10px 16px',
-            borderRadius: '12px',
-            backgroundColor: activeMainTab === 'orders' ? 'var(--primary)' : 'transparent',
-            color: activeMainTab === 'orders' ? '#FFFFFF' : 'var(--text-main)',
-            fontWeight: activeMainTab === 'orders' ? 800 : 600,
-            fontSize: '0.875rem',
-            boxShadow: activeMainTab === 'orders' ? '0 3px 10px rgba(230, 74, 25, 0.3)' : 'none',
-            transition: 'all 0.15s ease'
-          }}
-        >
-          <Flame size={16} />
-          <span>Live Orders Stream</span>
-          <span style={{
-            fontSize: '0.725rem',
-            backgroundColor: activeMainTab === 'orders' ? 'rgba(255,255,255,0.25)' : 'var(--secondary)',
-            color: activeMainTab === 'orders' ? '#FFFFFF' : 'var(--text-main)',
-            padding: '1px 6px',
-            borderRadius: '999px'
-          }}>
-            {pendingOrders.length + preparingOrders.length}
-          </span>
-        </button>
+      {/* Main Mode Navigation Tabs - ADMIN ONLY */}
+      {isAdmin && (
+        <div style={{
+          display: 'flex',
+          gap: '8px',
+          backgroundColor: '#FFFFFF',
+          padding: '6px',
+          borderRadius: '16px',
+          border: '1px solid var(--border-color)',
+          boxShadow: 'var(--shadow-soft)',
+          marginBottom: '24px',
+          overflowX: 'auto'
+        }} className="no-scrollbar">
+          <button
+            type="button"
+            onClick={() => setActiveMainTab('orders')}
+            style={{
+              flex: 1,
+              minWidth: '160px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              padding: '10px 16px',
+              borderRadius: '12px',
+              backgroundColor: activeMainTab === 'orders' ? 'var(--primary)' : 'transparent',
+              color: activeMainTab === 'orders' ? '#FFFFFF' : 'var(--text-main)',
+              fontWeight: activeMainTab === 'orders' ? 800 : 600,
+              fontSize: '0.875rem',
+              boxShadow: activeMainTab === 'orders' ? '0 3px 10px rgba(230, 74, 25, 0.3)' : 'none',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <Flame size={16} />
+            <span>Live Orders Stream</span>
+            <span style={{
+              fontSize: '0.725rem',
+              backgroundColor: activeMainTab === 'orders' ? 'rgba(255,255,255,0.25)' : 'var(--secondary)',
+              color: activeMainTab === 'orders' ? '#FFFFFF' : 'var(--text-main)',
+              padding: '1px 6px',
+              borderRadius: '999px'
+            }}>
+              {pendingOrders.length + preparingOrders.length}
+            </span>
+          </button>
 
-        <button
-          type="button"
-          onClick={() => setActiveMainTab('analytics')}
-          style={{
-            flex: 1,
-            minWidth: '160px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-            padding: '10px 16px',
-            borderRadius: '12px',
-            backgroundColor: activeMainTab === 'analytics' ? 'var(--primary)' : 'transparent',
-            color: activeMainTab === 'analytics' ? '#FFFFFF' : 'var(--text-main)',
-            fontWeight: activeMainTab === 'analytics' ? 800 : 600,
-            fontSize: '0.875rem',
-            boxShadow: activeMainTab === 'analytics' ? '0 3px 10px rgba(230, 74, 25, 0.3)' : 'none',
-            transition: 'all 0.15s ease'
-          }}
-        >
-          <BarChart2 size={16} />
-          <span>Daily Orders Analytics</span>
-        </button>
+          <button
+            type="button"
+            onClick={() => setActiveMainTab('analytics')}
+            style={{
+              flex: 1,
+              minWidth: '160px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              padding: '10px 16px',
+              borderRadius: '12px',
+              backgroundColor: activeMainTab === 'analytics' ? 'var(--primary)' : 'transparent',
+              color: activeMainTab === 'analytics' ? '#FFFFFF' : 'var(--text-main)',
+              fontWeight: activeMainTab === 'analytics' ? 800 : 600,
+              fontSize: '0.875rem',
+              boxShadow: activeMainTab === 'analytics' ? '0 3px 10px rgba(230, 74, 25, 0.3)' : 'none',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <BarChart2 size={16} />
+            <span>Daily Orders Analytics</span>
+          </button>
 
-        <button
-          type="button"
-          onClick={() => setActiveMainTab('settings')}
-          style={{
-            flex: 1,
-            minWidth: '180px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-            padding: '10px 16px',
-            borderRadius: '12px',
-            backgroundColor: activeMainTab === 'settings' ? 'var(--primary)' : 'transparent',
-            color: activeMainTab === 'settings' ? '#FFFFFF' : 'var(--text-main)',
-            fontWeight: activeMainTab === 'settings' ? 800 : 600,
-            fontSize: '0.875rem',
-            boxShadow: activeMainTab === 'settings' ? '0 3px 10px rgba(230, 74, 25, 0.3)' : 'none',
-            transition: 'all 0.15s ease'
-          }}
-        >
-          <Settings size={16} />
-          <span>Price &amp; Store Controls</span>
-        </button>
-      </div>
+          <button
+            type="button"
+            onClick={() => setActiveMainTab('settings')}
+            style={{
+              flex: 1,
+              minWidth: '180px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              padding: '10px 16px',
+              borderRadius: '12px',
+              backgroundColor: activeMainTab === 'settings' ? 'var(--primary)' : 'transparent',
+              color: activeMainTab === 'settings' ? '#FFFFFF' : 'var(--text-main)',
+              fontWeight: activeMainTab === 'settings' ? 800 : 600,
+              fontSize: '0.875rem',
+              boxShadow: activeMainTab === 'settings' ? '0 3px 10px rgba(230, 74, 25, 0.3)' : 'none',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <Settings size={16} />
+            <span>Price &amp; Store Controls</span>
+          </button>
+        </div>
+      )}
 
       {/* ============================================================= */}
       {/* TAB 1: LIVE ORDERS STREAM                                     */}

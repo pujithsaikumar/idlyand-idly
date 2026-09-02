@@ -6,11 +6,12 @@ import pool, { inMemoryDB, isDbConnected } from '../db.js';
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_jwt_key_idly_and_idly_2026';
 
-// Fallback staff credentials list if DB is uninitialized
+// Staff & Admin credentials
 const FALLBACK_STAFF_ACCOUNTS = [
+  { email: 'admin@idlyandidly.com', pass: 'Admin@123', role: 'admin' },
   { email: 'staff@idlyandidly.com', pass: 'Staff@123', role: 'admin' },
-  { email: 'kitchen@idlyandidly.com', pass: 'Kitchen@123', role: 'kitchen' },
-  { email: 'counter@idlyandidly.com', pass: 'Counter@123', role: 'counter' }
+  { email: 'kitchen@idlyandidly.com', pass: 'Kitchen@123', role: 'staff' },
+  { email: 'counter@idlyandidly.com', pass: 'Counter@123', role: 'staff' }
 ];
 
 router.post('/login', async (req, res) => {
@@ -31,7 +32,7 @@ router.post('/login', async (req, res) => {
       }
     }
 
-    // Check in-memory store or fallback credentials if not found in DB
+    // Check in-memory store or fallback credentials
     if (!staffUser) {
       const inMem = inMemoryDB.staffUsers.find(u => u.email === cleanEmail);
       if (inMem) {

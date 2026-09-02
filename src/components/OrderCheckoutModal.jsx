@@ -57,14 +57,6 @@ export default function OrderCheckoutModal({ isOpen, onClose, onOrderPlaced }) {
       return false;
     }
 
-    if (paymentMethod === 'upi') {
-      const cleanUtr = upiUtr.trim();
-      if (!cleanUtr || cleanUtr.length < 6) {
-        setErrorMessage('Please enter a valid UPI Transaction / UTR Number.');
-        return false;
-      }
-    }
-
     setErrorMessage('');
     return true;
   };
@@ -377,45 +369,22 @@ export default function OrderCheckoutModal({ isOpen, onClose, onOrderPlaced }) {
               flexDirection: 'column',
               gap: '12px'
             }}>
+              {/* Seamless In-App UPI Payment Info */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#E65100' }}>
-                  Hotel UPI ID:
+                  Pay to Hotel UPI ID:
                 </span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#FFFFFF', padding: '4px 10px', borderRadius: '8px', border: '1px solid #FFE0B2' }}>
-                  <code style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-main)' }}>{HOTEL_UPI_ID}</code>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#FFFFFF', padding: '6px 12px', borderRadius: '10px', border: '1px solid #FFE0B2' }}>
+                  <code style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-main)' }}>{HOTEL_UPI_ID}</code>
                   <button type="button" onClick={handleCopyUpi} style={{ color: 'var(--primary)', display: 'grid', placeItems: 'center' }}>
-                    {copiedUpi ? <Check size={14} color="#2E7D32" /> : <Copy size={14} />}
+                    {copiedUpi ? <Check size={16} color="#2E7D32" /> : <Copy size={16} />}
                   </button>
                 </div>
               </div>
 
-              {/* Direct UPI App Trigger */}
-              <a
-                href={upiDeepLink}
-                target="_blank"
-                rel="noreferrer"
-                style={{
-                  backgroundColor: '#E65100',
-                  color: '#FFFFFF',
-                  textAlign: 'center',
-                  padding: '10px',
-                  borderRadius: '12px',
-                  fontWeight: 700,
-                  fontSize: '0.875rem',
-                  textDecoration: 'none',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px',
-                  boxShadow: '0 2px 8px rgba(230, 81, 0, 0.25)'
-                }}
-              >
-                <QrCode size={16} /> Open GPay / PhonePe / Paytm to Pay ₹{total}
-              </a>
-
               <div>
                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '4px' }}>
-                  Enter UPI Transaction ID / UTR No. *
+                  UPI Reference / UTR No. (Optional)
                 </label>
                 <input
                   type="text"
@@ -433,7 +402,7 @@ export default function OrderCheckoutModal({ isOpen, onClose, onOrderPlaced }) {
                   }}
                 />
                 <p style={{ fontSize: '0.725rem', color: 'var(--text-muted)', marginTop: '3px' }}>
-                  Enter the 12-digit Ref / UTR number from your payment receipt for instant staff verification.
+                  Send ₹{total} to <strong>{HOTEL_UPI_ID}</strong> on GPay / PhonePe / Paytm.
                 </p>
               </div>
             </div>
