@@ -206,7 +206,7 @@ export default function OrderCheckoutModal({ isOpen, onClose, onOrderPlaced }) {
             </label>
             <input
               type="text"
-              placeholder="e.g. Rahul Sharma"
+              placeholder="Enter your name"
               value={customerName}
               onChange={e => setCustomerName(e.target.value)}
               style={{
