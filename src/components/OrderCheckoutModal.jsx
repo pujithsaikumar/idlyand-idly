@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { X, CreditCard, Banknote, ShieldCheck, AlertCircle, Loader2 } from 'lucide-react';
+import { X, CreditCard, Banknote, ShieldCheck, AlertCircle, Loader2, QrCode, Copy, Check } from 'lucide-react';
 import { HOSTEL_LIST } from '../data/menuData';
 import { useCart } from '../context/CartContext';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+const HOTEL_UPI_ID = 'idlyandidly@ybl'; // Hotel UPI VPA ID
 
 export default function OrderCheckoutModal({ isOpen, onClose, onOrderPlaced }) {
   const { cartItems, subtotal, parcelFee, deliveryFee, total, clearCart, setActiveTrackingOrderId, setSelectedHostel } = useCart();
@@ -11,14 +12,21 @@ export default function OrderCheckoutModal({ isOpen, onClose, onOrderPlaced }) {
   const [customerName, setCustomerName] = useState('');
   const [phone, setPhone] = useState('');
   const [hostel, setHostel] = useState(HOSTEL_LIST[0]);
-  const [roomNumber, setRoomNumber] = useState('');
   const [notes, setNotes] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('cod'); // 'cod' | 'online'
+  const [paymentMethod, setPaymentMethod] = useState('cod'); // 'cod' | 'upi'
+  const [upiUtr, setUpiUtr] = useState('');
+  const [copiedUpi, setCopiedUpi] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
   if (!isOpen) return null;
+
+  const handleCopyUpi = () => {
+    navigator.clipboard.writeText(HOTEL_UPI_ID);
+    setCopiedUpi(true);
+    setTimeout(() => setCopiedUpi(false), 2000);
+  };
 
   const validateForm = () => {
     if (!customerName.trim()) {
@@ -42,6 +50,14 @@ export default function OrderCheckoutModal({ isOpen, onClose, onOrderPlaced }) {
       return false;
     }
 
+    if (paymentMethod === 'upi') {
+      const cleanUtr = upiUtr.trim();
+      if (!cleanUtr || cleanUtr.length < 6) {
+        setErrorMessage('Please enter a valid UPI Transaction / UTR Number.');
+        return false;
+      }
+    }
+
     setErrorMessage('');
     return true;
   };
@@ -54,146 +70,39 @@ export default function OrderCheckoutModal({ isOpen, onClose, onOrderPlaced }) {
     setErrorMessage('');
 
     try {
-      if (paymentMethod === 'cod') {
-        // Submit COD Order directly
-        const response = await fetch(`${API_BASE_URL}/orders`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            customer_name: customerName,
-            phone: phone.replace(/\D/g, ''),
-            hostel,
-            room_number: roomNumber,
-            notes,
-            items: cartItems,
-            payment_method: 'cod',
-            payment_status: 'pending'
-          })
-        });
+      const response = await fetch(`${API_BASE_URL}/orders`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customer_name: customerName,
+          phone: phone.replace(/\D/g, ''),
+          hostel,
+          notes,
+          items: cartItems,
+          payment_method: paymentMethod,
+          payment_status: paymentMethod === 'upi' ? 'pending_verification' : 'pending',
+          upi_utr: paymentMethod === 'upi' ? upiUtr.trim() : null
+        })
+      });
 
-        const data = await response.json();
+      const data = await response.json();
 
-        if (!response.ok) {
-          throw new Error(data.error || 'Failed to place order.');
-        }
-
-        clearCart();
-        setActiveTrackingOrderId(data.orderId);
-        onOrderPlaced(data.orderId);
-      } else {
-        // Pay Online via Razorpay
-        // 1. Create Razorpay order on backend
-        const razorpayOrderRes = await fetch(`${API_BASE_URL}/payments/create-order`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount: total })
-        });
-
-        const rzpData = await razorpayOrderRes.json();
-        if (!razorpayOrderRes.ok) {
-          throw new Error(rzpData.error || 'Failed to initialize online payment.');
-        }
-
-        // 2. Open Razorpay Checkout Widget (or fallback mock if window.Razorpay unavailable)
-        if (window.Razorpay && !rzpData.isMock) {
-          const options = {
-            key: rzpData.key_id || import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_YourKeyIdHere',
-            amount: rzpData.amount,
-            currency: rzpData.currency || 'INR',
-            name: 'Idly & Idly Tiffins',
-            description: `Hostel Delivery for ${customerName}`,
-            order_id: rzpData.id,
-            prefill: {
-              name: customerName,
-              contact: phone.replace(/\D/g, '')
-            },
-            theme: {
-              color: '#E65100'
-            },
-            handler: async function (response) {
-              // Verify payment on backend
-              try {
-                // First create order
-                const createOrderRes = await fetch(`${API_BASE_URL}/orders`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    customer_name: customerName,
-                    phone: phone.replace(/\D/g, ''),
-                    hostel,
-                    room_number: roomNumber,
-                    notes,
-                    items: cartItems,
-                    payment_method: 'online',
-                    payment_status: 'paid',
-                    razorpay_payment_id: response.razorpay_payment_id
-                  })
-                });
-                const createOrderData = await createOrderRes.json();
-
-                // Verify signature
-                await fetch(`${API_BASE_URL}/payments/verify`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    razorpay_order_id: response.razorpay_order_id,
-                    razorpay_payment_id: response.razorpay_payment_id,
-                    razorpay_signature: response.razorpay_signature,
-                    order_id: createOrderData.orderId
-                  })
-                });
-
-                clearCart();
-                setActiveTrackingOrderId(createOrderData.orderId);
-                onOrderPlaced(createOrderData.orderId);
-              } catch (verifyErr) {
-                setErrorMessage('Payment verification error: ' + verifyErr.message);
-              } finally {
-                setLoading(false);
-              }
-            },
-            modal: {
-              ondismiss: function () {
-                setLoading(false);
-              }
-            }
-          };
-
-          const rzp = new window.Razorpay(options);
-          rzp.open();
-        } else {
-          // Development/Mock Razorpay flow fallback
-          const createOrderRes = await fetch(`${API_BASE_URL}/orders`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              customer_name: customerName,
-              phone: phone.replace(/\D/g, ''),
-              hostel,
-              room_number: roomNumber,
-              notes,
-              items: cartItems,
-              payment_method: 'online',
-              payment_status: 'paid',
-              razorpay_payment_id: `pay_mock_${Date.now()}`
-            })
-          });
-          const createOrderData = await createOrderRes.json();
-
-          clearCart();
-          setActiveTrackingOrderId(createOrderData.orderId);
-          onOrderPlaced(createOrderData.orderId);
-        }
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to place order.');
       }
+
+      clearCart();
+      setActiveTrackingOrderId(data.orderId);
+      onOrderPlaced(data.orderId);
     } catch (err) {
       console.error('Checkout error:', err);
       setErrorMessage(err.message || 'Something went wrong during checkout.');
     } finally {
-      if (paymentMethod === 'cod') {
-        setLoading(false);
-      }
+      setLoading(false);
     }
   };
+
+  const upiDeepLink = `upi://pay?pa=${HOTEL_UPI_ID}&pn=Idly%26Idly%20Tiffins&am=${total}&cu=INR`;
 
   return (
     <div style={{
@@ -202,7 +111,7 @@ export default function OrderCheckoutModal({ isOpen, onClose, onOrderPlaced }) {
       zIndex: 110,
       display: 'grid',
       placeItems: 'center',
-      backgroundColor: 'rgba(0, 0, 0, 0.6)',
+      backgroundColor: 'rgba(0, 0, 0, 0.65)',
       backdropFilter: 'blur(4px)',
       padding: '16px'
     }}>
@@ -410,32 +319,105 @@ export default function OrderCheckoutModal({ isOpen, onClose, onOrderPlaced }) {
 
               <button
                 type="button"
-                onClick={() => setPaymentMethod('online')}
+                onClick={() => setPaymentMethod('upi')}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: '8px',
                   padding: '12px',
                   borderRadius: '14px',
-                  border: `2px solid ${paymentMethod === 'online' ? 'var(--primary)' : 'var(--border-color)'}`,
-                  backgroundColor: paymentMethod === 'online' ? '#FFF3E0' : '#FFFFFF',
-                  color: paymentMethod === 'online' ? 'var(--primary)' : 'var(--text-main)',
+                  border: `2px solid ${paymentMethod === 'upi' ? 'var(--primary)' : 'var(--border-color)'}`,
+                  backgroundColor: paymentMethod === 'upi' ? '#FFF3E0' : '#FFFFFF',
+                  color: paymentMethod === 'upi' ? 'var(--primary)' : 'var(--text-main)',
                   fontWeight: 600,
                   fontSize: '0.875rem'
                 }}
               >
-                <CreditCard size={18} />
-                <span>Pay Online (Razorpay)</span>
+                <QrCode size={18} />
+                <span>Pay via UPI / GPay</span>
               </button>
             </div>
           </div>
+
+          {/* UPI Direct Payment Details Box */}
+          {paymentMethod === 'upi' && (
+            <div style={{
+              backgroundColor: '#FFF8F0',
+              border: '1px solid #FFE0B2',
+              borderRadius: '16px',
+              padding: '16px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#E65100' }}>
+                  Hotel UPI ID:
+                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#FFFFFF', padding: '4px 10px', borderRadius: '8px', border: '1px solid #FFE0B2' }}>
+                  <code style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-main)' }}>{HOTEL_UPI_ID}</code>
+                  <button type="button" onClick={handleCopyUpi} style={{ color: 'var(--primary)', display: 'grid', placeItems: 'center' }}>
+                    {copiedUpi ? <Check size={14} color="#2E7D32" /> : <Copy size={14} />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Direct UPI App Trigger */}
+              <a
+                href={upiDeepLink}
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  backgroundColor: '#E65100',
+                  color: '#FFFFFF',
+                  textAlign: 'center',
+                  padding: '10px',
+                  borderRadius: '12px',
+                  fontWeight: 700,
+                  fontSize: '0.875rem',
+                  textDecoration: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  boxShadow: '0 2px 8px rgba(230, 81, 0, 0.25)'
+                }}
+              >
+                <QrCode size={16} /> Open GPay / PhonePe / Paytm to Pay ₹{total}
+              </a>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '4px' }}>
+                  Enter UPI Transaction ID / UTR No. *
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. 423910582910 (12 Digits)"
+                  value={upiUtr}
+                  onChange={e => setUpiUtr(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    borderRadius: '10px',
+                    border: '1px solid var(--border-color)',
+                    fontSize: '0.9rem',
+                    outline: 'none',
+                    backgroundColor: '#FFFFFF'
+                  }}
+                />
+                <p style={{ fontSize: '0.725rem', color: 'var(--text-muted)', marginTop: '3px' }}>
+                  Enter the 12-digit Ref / UTR number from your payment receipt for instant staff verification.
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Submit Button */}
           <button
             type="submit"
             disabled={loading}
             style={{
-              marginTop: '12px',
+              marginTop: '8px',
               width: '100%',
               backgroundColor: 'var(--primary)',
               color: '#FFFFFF',
@@ -458,7 +440,7 @@ export default function OrderCheckoutModal({ isOpen, onClose, onOrderPlaced }) {
             ) : (
               <>
                 <ShieldCheck size={20} />
-                {paymentMethod === 'cod' ? `Place Order (Pay ₹${total} COD)` : `Pay ₹${total} Online Now`}
+                {paymentMethod === 'cod' ? `Place Order (Pay ₹${total} COD)` : `Place Order (UPI UTR Submitted)`}
               </>
             )}
           </button>

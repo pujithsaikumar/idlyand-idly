@@ -286,11 +286,15 @@ router.patch('/:id/status', authenticateStaffToken, async (req, res) => {
       });
     }
 
+    // Auto-verify payment if status is delivered
+    const shouldVerifyPayment = order_status === 'delivered';
+
     if (isDbConnected()) {
-      const result = await pool.query(
-        `UPDATE orders SET order_status = $1 WHERE id = $2 RETURNING *;`,
-        [order_status, orderId]
-      );
+      const updateQuery = shouldVerifyPayment
+        ? `UPDATE orders SET order_status = $1, payment_status = 'paid' WHERE id = $2 RETURNING *;`
+        : `UPDATE orders SET order_status = $1 WHERE id = $2 RETURNING *;`;
+
+      const result = await pool.query(updateQuery, [order_status, orderId]);
       if (result.rows.length === 0) {
         return res.status(404).json({ error: 'Order not found.' });
       }
@@ -301,11 +305,44 @@ router.patch('/:id/status', authenticateStaffToken, async (req, res) => {
         return res.status(404).json({ error: 'Order not found.' });
       }
       order.order_status = order_status;
+      if (shouldVerifyPayment) {
+        order.payment_status = 'paid';
+      }
       return res.json({ message: 'Order status updated successfully', order });
     }
   } catch (err) {
     console.error('Update order status error:', err);
     return res.status(500).json({ error: 'Failed to update order status.' });
+  }
+});
+
+// -------------------------------------------------------------
+// PATCH /api/orders/:id/verify-payment (Staff-Only Manual Payment Verification)
+// -------------------------------------------------------------
+router.patch('/:id/verify-payment', authenticateStaffToken, async (req, res) => {
+  try {
+    const orderId = req.params.id;
+
+    if (isDbConnected()) {
+      const result = await pool.query(
+        `UPDATE orders SET payment_status = 'paid' WHERE id = $1 RETURNING *;`,
+        [orderId]
+      );
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Order not found.' });
+      }
+      return res.json({ message: 'Payment verified successfully', order: result.rows[0] });
+    } else {
+      const order = inMemoryDB.orders.find(o => o.id === orderId);
+      if (!order) {
+        return res.status(404).json({ error: 'Order not found.' });
+      }
+      order.payment_status = 'paid';
+      return res.json({ message: 'Payment verified successfully', order });
+    }
+  } catch (err) {
+    console.error('Verify payment error:', err);
+    return res.status(500).json({ error: 'Failed to verify payment.' });
   }
 });
 

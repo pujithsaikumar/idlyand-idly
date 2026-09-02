@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LogOut, RefreshCw, Filter, CheckCircle2, Clock, Bike, Phone, MapPin, AlertCircle, Flame, XCircle } from 'lucide-react';
+import { LogOut, RefreshCw, Filter, CheckCircle2, Clock, Bike, Phone, MapPin, AlertCircle, Flame, XCircle, ShieldCheck, QrCode } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
@@ -12,6 +12,7 @@ export default function RestaurantDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [updatingId, setUpdatingId] = useState(null);
 
   const handleRefreshClick = async () => {
     setRefreshing(true);
@@ -74,10 +75,32 @@ export default function RestaurantDashboard() {
         throw new Error(data.error || 'Failed to update order status.');
       }
 
-      // Refresh list
       await fetchOrders();
     } catch (err) {
       alert('Status Update Error: ' + err.message);
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  const handleVerifyPayment = async (orderId) => {
+    setUpdatingId(orderId);
+    try {
+      const response = await fetch(`${API_BASE_URL}/orders/${orderId}/verify-payment`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to verify payment.');
+      }
+
+      await fetchOrders();
+    } catch (err) {
+      alert('Payment Verification Error: ' + err.message);
     } finally {
       setUpdatingId(null);
     }
@@ -188,7 +211,7 @@ export default function RestaurantDashboard() {
         </div>
       </div>
 
-      {/* Status Filter Tabs (Styled exactly as provided image) */}
+      {/* Status Filter Tabs */}
       <div style={{
         display: 'inline-flex',
         alignItems: 'center',
@@ -265,260 +288,297 @@ export default function RestaurantDashboard() {
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {orders.map(order => (
-            <div
-              key={order.id}
-              style={{
-                backgroundColor: '#FFFFFF',
-                borderRadius: '20px',
-                border: '1px solid var(--border-color)',
-                padding: '20px',
-                boxShadow: 'var(--shadow-soft)'
-              }}
-            >
-              {/* Order Header Row */}
-              <div style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '12px',
-                paddingBottom: '14px',
-                borderBottom: '1px solid var(--border-color)'
-              }}>
-                <div>
-                  <span style={{
-                    fontSize: '0.8rem',
-                    fontWeight: 700,
-                    color: 'var(--primary)',
-                    backgroundColor: '#FFF3E0',
-                    padding: '2px 10px',
-                    borderRadius: 'var(--radius-pill)'
-                  }}>
-                    {order.id}
-                  </span>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginLeft: '10px' }}>
-                    {order.created_at ? new Date(order.created_at).toLocaleTimeString() : 'Just now'}
-                  </span>
-                </div>
+          {orders.map(order => {
+            const isPaid = order.payment_status === 'paid';
+            const isUpi = order.payment_method === 'upi';
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{
-                    padding: '4px 12px',
-                    borderRadius: 'var(--radius-pill)',
-                    fontSize: '0.8rem',
-                    fontWeight: 700,
-                    backgroundColor: order.payment_status === 'paid' ? '#E8F5E9' : '#FFF3E0',
-                    color: order.payment_status === 'paid' ? '#2E7D32' : '#E65100'
-                  }}>
-                    {order.payment_method?.toUpperCase()} · {order.payment_status?.toUpperCase()}
-                  </span>
-
-                  <span style={{
-                    padding: '4px 12px',
-                    borderRadius: 'var(--radius-pill)',
-                    fontSize: '0.8rem',
-                    fontWeight: 700,
-                    backgroundColor:
-                      order.order_status === 'delivered' ? '#E8F5E9' :
-                      order.order_status === 'en_route' ? '#F3E5F5' :
-                      order.order_status === 'preparing' ? '#E3F2FD' : '#FFF3E0',
-                    color:
-                      order.order_status === 'delivered' ? '#2E7D32' :
-                      order.order_status === 'en_route' ? '#7B1FA2' :
-                      order.order_status === 'preparing' ? '#1976D2' : '#E65100',
-                    textTransform: 'capitalize'
-                  }}>
-                    Status: {order.order_status?.replace('_', ' ')}
-                  </span>
-                </div>
-              </div>
-
-              {/* Customer & Location Info */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                gap: '12px',
-                margin: '14px 0'
-              }}>
-                <div>
-                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Customer</p>
-                  <p style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-main)' }}>
-                    {order.customer_name}
-                  </p>
-                  <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <Phone size={14} /> {order.phone}
-                  </p>
-                </div>
-
-                <div>
-                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Delivery Destination</p>
-                  <p style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <MapPin size={16} color="var(--primary)" /> {order.hostel}
-                  </p>
-                </div>
-
-                <div>
-                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Bill Breakdown</p>
-                  <p style={{ fontSize: '0.825rem', color: 'var(--text-main)' }}>
-                    Subtotal: ₹{order.subtotal} | Parcel: ₹{order.parcel_fee} | Delivery: <strong style={{ color: parseFloat(order.delivery_fee) > 0 ? 'var(--primary)' : '#2E7D32' }}>{parseFloat(order.delivery_fee) > 0 ? `₹${order.delivery_fee}` : 'FREE'}</strong>
-                  </p>
-                  <p style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--primary)' }}>
-                    Total Bill: ₹{order.total}
-                  </p>
-                </div>
-              </div>
-
-              {/* Cooking Notes */}
-              {order.notes && (
+            return (
+              <div
+                key={order.id}
+                style={{
+                  backgroundColor: '#FFFFFF',
+                  borderRadius: '20px',
+                  border: '1px solid var(--border-color)',
+                  padding: '20px',
+                  boxShadow: 'var(--shadow-soft)'
+                }}
+              >
+                {/* Order Header Row */}
                 <div style={{
-                  backgroundColor: '#FFFDE7',
-                  border: '1px solid #FFF59D',
-                  padding: '8px 12px',
-                  borderRadius: '10px',
-                  fontSize: '0.85rem',
-                  color: '#F57F17',
-                  marginBottom: '14px'
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '12px',
+                  paddingBottom: '14px',
+                  borderBottom: '1px solid var(--border-color)'
                 }}>
-                  📝 <strong>Note:</strong> {order.notes}
-                </div>
-              )}
-
-              {/* Items Breakdown */}
-              {order.items && order.items.length > 0 && (
-                <div style={{
-                  backgroundColor: 'var(--secondary)',
-                  padding: '12px',
-                  borderRadius: '12px',
-                  marginBottom: '16px'
-                }}>
-                  <p style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '6px' }}>
-                    Items to Prepare ({order.items.length}):
-                  </p>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                    {order.items.map((item, i) => (
-                      <span
-                        key={i}
-                        style={{
-                          backgroundColor: '#FFFFFF',
-                          padding: '4px 10px',
-                          borderRadius: '8px',
-                          fontSize: '0.85rem',
-                          fontWeight: 600,
-                          color: 'var(--text-main)',
-                          boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
-                        }}
-                      >
-                        {item.quantity}x {item.item_name} (₹{item.unit_price * item.quantity})
-                      </span>
-                    ))}
+                  <div>
+                    <span style={{
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                      color: 'var(--primary)',
+                      backgroundColor: '#FFF3E0',
+                      padding: '2px 10px',
+                      borderRadius: 'var(--radius-pill)'
+                    }}>
+                      {order.id}
+                    </span>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginLeft: '10px' }}>
+                      {order.created_at ? new Date(order.created_at).toLocaleTimeString() : 'Just now'}
+                    </span>
                   </div>
-                </div>
-              )}
 
-              {/* Status Action Buttons */}
-              <div style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                alignItems: 'center',
-                gap: '10px',
-                paddingTop: '12px',
-                borderTop: '1px dashed var(--border-color)'
-              }}>
-                <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)' }}>
-                  Advance Order State:
-                </span>
-
-                {order.order_status === 'pending' && (
-                  <button
-                    type="button"
-                    disabled={updatingId === order.id}
-                    onClick={() => handleUpdateStatus(order.id, 'preparing')}
-                    style={{
-                      backgroundColor: '#E65100',
-                      color: '#FFFFFF',
-                      padding: '8px 16px',
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <span style={{
+                      padding: '4px 12px',
                       borderRadius: 'var(--radius-pill)',
-                      fontSize: '0.825rem',
+                      fontSize: '0.8rem',
                       fontWeight: 700,
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      boxShadow: '0 2px 8px rgba(230, 81, 0, 0.3)'
-                    }}
-                  >
-                    <Flame size={16} /> Accept &amp; Start Preparing
-                  </button>
-                )}
-
-                {order.order_status === 'preparing' && (
-                  <button
-                    type="button"
-                    disabled={updatingId === order.id}
-                    onClick={() => handleUpdateStatus(order.id, 'en_route')}
-                    style={{
-                      backgroundColor: '#7B1FA2',
-                      color: '#FFFFFF',
-                      padding: '8px 16px',
-                      borderRadius: 'var(--radius-pill)',
-                      fontSize: '0.825rem',
-                      fontWeight: 700,
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      boxShadow: '0 2px 8px rgba(123, 31, 162, 0.3)'
-                    }}
-                  >
-                    <Bike size={16} /> Dispatch Rider (Out for Delivery)
-                  </button>
-                )}
-
-                {order.order_status === 'en_route' && (
-                  <button
-                    type="button"
-                    disabled={updatingId === order.id}
-                    onClick={() => handleUpdateStatus(order.id, 'delivered')}
-                    style={{
-                      backgroundColor: '#2E7D32',
-                      color: '#FFFFFF',
-                      padding: '8px 16px',
-                      borderRadius: 'var(--radius-pill)',
-                      fontSize: '0.825rem',
-                      fontWeight: 700,
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      boxShadow: '0 2px 8px rgba(46, 125, 50, 0.3)'
-                    }}
-                  >
-                    <CheckCircle2 size={16} /> Mark Delivered
-                  </button>
-                )}
-
-                {order.order_status !== 'delivered' && order.order_status !== 'cancelled' && (
-                  <button
-                    type="button"
-                    disabled={updatingId === order.id}
-                    onClick={() => handleUpdateStatus(order.id, 'cancelled')}
-                    style={{
-                      backgroundColor: '#FFEBEE',
-                      color: '#C62828',
-                      border: '1px solid #FFCDD2',
-                      padding: '8px 14px',
-                      borderRadius: 'var(--radius-pill)',
-                      fontSize: '0.825rem',
-                      fontWeight: 600,
+                      backgroundColor: isPaid ? '#E8F5E9' : '#FFF3E0',
+                      color: isPaid ? '#2E7D32' : '#E65100',
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '4px'
-                    }}
-                  >
-                    <XCircle size={15} /> Cancel Order
-                  </button>
+                    }}>
+                      {isUpi ? <QrCode size={13} /> : null}
+                      {order.payment_method?.toUpperCase()} · {isPaid ? 'VERIFIED (PAID)' : 'PENDING'}
+                    </span>
+
+                    <span style={{
+                      padding: '4px 12px',
+                      borderRadius: 'var(--radius-pill)',
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                      backgroundColor:
+                        order.order_status === 'delivered' ? '#E8F5E9' :
+                        order.order_status === 'en_route' ? '#F3E5F5' :
+                        order.order_status === 'preparing' ? '#E3F2FD' : '#FFF3E0',
+                      color:
+                        order.order_status === 'delivered' ? '#2E7D32' :
+                        order.order_status === 'en_route' ? '#7B1FA2' :
+                        order.order_status === 'preparing' ? '#1976D2' : '#E65100',
+                      textTransform: 'capitalize'
+                    }}>
+                      Status: {order.order_status?.replace('_', ' ')}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Customer & Location Info */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                  gap: '12px',
+                  margin: '14px 0'
+                }}>
+                  <div>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Customer</p>
+                    <p style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-main)' }}>
+                      {order.customer_name}
+                    </p>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Phone size={14} /> {order.phone}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Delivery Destination</p>
+                    <p style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <MapPin size={16} color="var(--primary)" /> {order.hostel}
+                    </p>
+                    {isUpi && (
+                      <p style={{ fontSize: '0.8rem', color: '#E65100', fontWeight: 600, marginTop: '2px' }}>
+                        UPI UTR No: <strong>{order.upi_utr || 'Not provided'}</strong>
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Bill Breakdown</p>
+                    <p style={{ fontSize: '0.825rem', color: 'var(--text-main)' }}>
+                      Subtotal: ₹{order.subtotal} | Parcel: ₹{order.parcel_fee} | Delivery: <strong style={{ color: parseFloat(order.delivery_fee) > 0 ? 'var(--primary)' : '#2E7D32' }}>{parseFloat(order.delivery_fee) > 0 ? `₹${order.delivery_fee}` : 'FREE'}</strong>
+                    </p>
+                    <p style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--primary)' }}>
+                      Total Bill: ₹{order.total}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Cooking Notes */}
+                {order.notes && (
+                  <div style={{
+                    backgroundColor: '#FFFDE7',
+                    border: '1px solid #FFF59D',
+                    padding: '8px 12px',
+                    borderRadius: '10px',
+                    fontSize: '0.85rem',
+                    color: '#F57F17',
+                    marginBottom: '14px'
+                  }}>
+                    📝 <strong>Note:</strong> {order.notes}
+                  </div>
                 )}
+
+                {/* Items Breakdown */}
+                {order.items && order.items.length > 0 && (
+                  <div style={{
+                    backgroundColor: 'var(--secondary)',
+                    padding: '12px',
+                    borderRadius: '12px',
+                    marginBottom: '16px'
+                  }}>
+                    <p style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '6px' }}>
+                      Items to Prepare ({order.items.length}):
+                    </p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                      {order.items.map((item, i) => (
+                        <span
+                          key={i}
+                          style={{
+                            backgroundColor: '#FFFFFF',
+                            padding: '4px 10px',
+                            borderRadius: '8px',
+                            fontSize: '0.85rem',
+                            fontWeight: 600,
+                            color: 'var(--text-main)',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                          }}
+                        >
+                          {item.quantity}x {item.item_name} (₹{item.unit_price * item.quantity})
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Status & Payment Action Buttons */}
+                <div style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  alignItems: 'center',
+                  gap: '10px',
+                  paddingTop: '12px',
+                  borderTop: '1px dashed var(--border-color)'
+                }}>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)' }}>
+                    Advance Order State:
+                  </span>
+
+                  {order.order_status === 'pending' && (
+                    <button
+                      type="button"
+                      disabled={updatingId === order.id}
+                      onClick={() => handleUpdateStatus(order.id, 'preparing')}
+                      style={{
+                        backgroundColor: '#E65100',
+                        color: '#FFFFFF',
+                        padding: '8px 16px',
+                        borderRadius: 'var(--radius-pill)',
+                        fontSize: '0.825rem',
+                        fontWeight: 700,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        boxShadow: '0 2px 8px rgba(230, 81, 0, 0.3)'
+                      }}
+                    >
+                      <Flame size={16} /> Accept &amp; Start Preparing
+                    </button>
+                  )}
+
+                  {order.order_status === 'preparing' && (
+                    <button
+                      type="button"
+                      disabled={updatingId === order.id}
+                      onClick={() => handleUpdateStatus(order.id, 'en_route')}
+                      style={{
+                        backgroundColor: '#7B1FA2',
+                        color: '#FFFFFF',
+                        padding: '8px 16px',
+                        borderRadius: 'var(--radius-pill)',
+                        fontSize: '0.825rem',
+                        fontWeight: 700,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        boxShadow: '0 2px 8px rgba(123, 31, 162, 0.3)'
+                      }}
+                    >
+                      <Bike size={16} /> Dispatch Rider (Out for Delivery)
+                    </button>
+                  )}
+
+                  {order.order_status === 'en_route' && (
+                    <button
+                      type="button"
+                      disabled={updatingId === order.id}
+                      onClick={() => handleUpdateStatus(order.id, 'delivered')}
+                      style={{
+                        backgroundColor: '#2E7D32',
+                        color: '#FFFFFF',
+                        padding: '8px 16px',
+                        borderRadius: 'var(--radius-pill)',
+                        fontSize: '0.825rem',
+                        fontWeight: 700,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        boxShadow: '0 2px 8px rgba(46, 125, 50, 0.3)'
+                      }}
+                    >
+                      <CheckCircle2 size={16} /> Mark Delivered &amp; Verify Payment
+                    </button>
+                  )}
+
+                  {/* Manual Verify Payment Button if unpaid */}
+                  {!isPaid && (
+                    <button
+                      type="button"
+                      disabled={updatingId === order.id}
+                      onClick={() => handleVerifyPayment(order.id)}
+                      style={{
+                        backgroundColor: '#FFF3E0',
+                        color: '#E65100',
+                        border: '1px solid #FFE0B2',
+                        padding: '8px 14px',
+                        borderRadius: 'var(--radius-pill)',
+                        fontSize: '0.825rem',
+                        fontWeight: 700,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <ShieldCheck size={15} /> Verify Payment Received
+                    </button>
+                  )}
+
+                  {order.order_status !== 'delivered' && order.order_status !== 'cancelled' && (
+                    <button
+                      type="button"
+                      disabled={updatingId === order.id}
+                      onClick={() => handleUpdateStatus(order.id, 'cancelled')}
+                      style={{
+                        backgroundColor: '#FFEBEE',
+                        color: '#C62828',
+                        border: '1px solid #FFCDD2',
+                        padding: '8px 14px',
+                        borderRadius: 'var(--radius-pill)',
+                        fontSize: '0.825rem',
+                        fontWeight: 600,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <XCircle size={15} /> Cancel Order
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

@@ -1,29 +1,35 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap');
+
 :root {
-  --font-heading: 'Fredoka', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-body: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-heading: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-serif: 'Playfair Display', Georgia, serif;
+  --font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   
-  --bg-gradient: linear-gradient(180deg, #FFFDF9 0%, #FFF8EE 100%);
-  --warm-gradient: linear-gradient(135deg, #FF6B00 0%, #FF8C00 100%);
-  --accent-gold: #D4AF37;
+  --bg-gradient: linear-gradient(180deg, #FAF7F2 0%, #F5EFEB 100%);
+  --warm-gradient: linear-gradient(135deg, #FF5722 0%, #FF8F00 100%);
+  --gold-gradient: linear-gradient(135deg, #D4AF37 0%, #AA7C11 100%);
+  --dark-gradient: linear-gradient(135deg, #231815 0%, #150E0C 100%);
   
-  --primary: #E65100;
-  --primary-hover: #BF360C;
+  --primary: #E64A19;
+  --primary-hover: #D84315;
   --primary-light: #FFF3E0;
+  --primary-glow: rgba(230, 74, 25, 0.28);
   
-  --secondary: #F5EBE6;
-  --secondary-foreground: #4A3E3D;
+  --secondary: #F3ECE6;
+  --secondary-foreground: #3E312F;
   
   --card-bg: #FFFFFF;
-  --border-color: #EFE6DC;
+  --border-color: #EDE4DC;
   
-  --text-main: #2D2424;
-  --text-muted: #7A6E6D;
+  --text-main: #1C1311;
+  --text-muted: #6E615E;
   
-  --shadow-soft: 0 4px 20px -2px rgba(230, 81, 0, 0.08);
-  --shadow-hover: 0 8px 30px -4px rgba(230, 81, 0, 0.16);
-  --shadow-modal: 0 20px 50px -10px rgba(0, 0, 0, 0.25);
+  --shadow-soft: 0 4px 20px -2px rgba(28, 19, 17, 0.05), 0 2px 6px -1px rgba(28, 19, 17, 0.03);
+  --shadow-hover: 0 16px 36px -6px rgba(230, 74, 25, 0.14), 0 4px 12px -2px rgba(28, 19, 17, 0.06);
+  --shadow-modal: 0 25px 60px -12px rgba(20, 10, 8, 0.35);
+  --shadow-glow: 0 0 24px rgba(230, 74, 25, 0.35);
   
-  --radius-card: 18px;
+  --radius-card: 20px;
   --radius-pill: 9999px;
 }
 
@@ -40,10 +46,16 @@ body {
   min-height: 100vh;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  padding-bottom: 70px;
 }
 
 h1, h2, h3, h4, .font-display {
   font-family: var(--font-heading);
+  letter-spacing: -0.02em;
+}
+
+.font-serif {
+  font-family: var(--font-serif);
 }
 
 button {
@@ -51,7 +63,7 @@ button {
   cursor: pointer;
   border: none;
   background: none;
-  transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.15s ease;
+  transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.15s ease, background-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 button:active {
@@ -65,17 +77,18 @@ input, select, textarea {
 
 input:focus, select:focus, textarea:focus {
   border-color: var(--primary) !important;
-  box-shadow: 0 0 0 3px rgba(230, 81, 0, 0.15);
+  box-shadow: 0 0 0 3px rgba(230, 74, 25, 0.18);
 }
 
 /* Animations & Effects */
 .card-lift {
-  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.28s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.28s ease;
 }
 
 .card-lift:hover {
-  transform: translateY(-3px);
+  transform: translateY(-4px);
   box-shadow: var(--shadow-hover);
+  border-color: #E2D1C3 !important;
 }
 
 .animate-fade-in {
@@ -84,6 +97,14 @@ input:focus, select:focus, textarea:focus {
 
 .animate-pop-in {
   animation: popIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-pulse-subtle {
+  animation: pulseSubtle 2.5s infinite;
 }
 
 @keyframes fadeIn {
@@ -96,17 +117,43 @@ input:focus, select:focus, textarea:focus {
   to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(100%); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulseSubtle {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.03); opacity: 0.85; }
+}
+
+/* Glassmorphism Classes */
+.glass-header {
+  background: rgba(250, 247, 242, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(237, 228, 220, 0.8);
+}
+
+.glass-pill {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+}
+
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 7px;
+  height: 7px;
 }
 ::-webkit-scrollbar-track {
-  background: #FFFDF9;
+  background: #FAF7F2;
 }
 ::-webkit-scrollbar-thumb {
-  background: #E0D5C7;
-  border-radius: 4px;
+  background: #DDD0C4;
+  border-radius: 999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #C4B5A5;
+  background: #C4B3A3;
 }

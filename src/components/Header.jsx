@@ -1,10 +1,10 @@
 import React from 'react';
-import { ShoppingCart, Store, Clock } from 'lucide-react';
+import { ShoppingBag, Store, Clock, Sparkles } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 
 export default function Header() {
-  const { totalItemCount, setIsCartOpen, activeTrackingOrderId } = useCart();
+  const { totalItemCount, total, setIsCartOpen, activeTrackingOrderId } = useCart();
   const { isAuthenticated, isStaffViewActive, setIsStaffViewActive, setIsStaffModalOpen } = useAuth();
 
   const handleRestaurantClick = (e) => {
@@ -17,17 +17,41 @@ export default function Header() {
   };
 
   return (
-    <header style={{
+    <header className="glass-header" style={{
       position: 'sticky',
       top: 0,
       zIndex: 40,
-      borderBottom: '1px solid var(--border-color)',
-      backgroundColor: 'rgba(255, 253, 249, 0.85)',
-      backdropFilter: 'blur(12px)',
-      WebkitBackdropFilter: 'blur(12px)'
+      transition: 'all 0.2s ease'
     }}>
+      {/* Top micro-announcement banner */}
       <div style={{
-        maxWidth: '1024px',
+        background: 'linear-gradient(90deg, #1C1311 0%, #2A1C18 50%, #1C1311 100%)',
+        color: '#FAF6F0',
+        padding: '5px 16px',
+        fontSize: '0.75rem',
+        fontWeight: 600,
+        textAlign: 'center',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '8px',
+        letterSpacing: '0.02em'
+      }}>
+        <span style={{
+          display: 'inline-block',
+          width: '7px',
+          height: '7px',
+          borderRadius: '50%',
+          backgroundColor: '#4CAF50',
+          boxShadow: '0 0 8px #4CAF50'
+        }} />
+        <span>KITCHEN LIVE &amp; PREPARING FRESH ORDERS</span>
+        <span style={{ opacity: 0.4 }}>•</span>
+        <span style={{ color: '#D4AF37' }}>⚡ 100% Free Hostel Delivery on orders ≥ ₹100</span>
+      </div>
+
+      <div style={{
+        maxWidth: '1080px',
         margin: '0 auto',
         display: 'flex',
         alignItems: 'center',
@@ -35,58 +59,85 @@ export default function Header() {
         padding: '12px 16px'
       }}>
         {/* Brand */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{
-            width: '38px',
-            height: '38px',
-            borderRadius: '50%',
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
+          <div style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '12px',
             background: 'var(--warm-gradient)',
             display: 'grid',
             placeItems: 'center',
-            fontSize: '1.2rem',
-            boxShadow: '0 2px 8px rgba(230, 81, 0, 0.25)'
-          }}>
-            🍽️
-          </span>
-          <span style={{
-            fontFamily: 'var(--font-heading)',
             fontSize: '1.25rem',
-            fontWeight: 700,
-            color: 'var(--primary)'
+            boxShadow: '0 4px 12px rgba(230, 74, 25, 0.28)',
+            color: '#FFFFFF'
           }}>
-            Idly &amp; Idly
-          </span>
+            🥞
+          </div>
+          <div>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}>
+              <span style={{
+                fontFamily: 'var(--font-heading)',
+                fontSize: '1.35rem',
+                fontWeight: 800,
+                color: 'var(--text-main)',
+                letterSpacing: '-0.03em'
+              }}>
+                Idly <span style={{ color: 'var(--primary)' }}>&amp;</span> Idly
+              </span>
+              <span style={{
+                backgroundColor: '#FFF3E0',
+                color: 'var(--primary)',
+                fontSize: '0.65rem',
+                fontWeight: 800,
+                padding: '2px 6px',
+                borderRadius: '6px',
+                border: '1px solid #FFE0B2',
+                letterSpacing: '0.05em'
+              }}>
+                GOURMET
+              </span>
+            </div>
+            <p style={{ fontSize: '0.725rem', color: 'var(--text-muted)', fontWeight: 500, marginTop: '-2px' }}>
+              Authentic South Indian Cloud Kitchen
+            </p>
+          </div>
         </div>
 
         {/* Nav actions */}
-        <nav style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <nav style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           {!isStaffViewActive && (
             <>
               <a
                 href="#menu"
                 style={{
-                  padding: '6px 14px',
+                  padding: '6px 12px',
                   borderRadius: 'var(--radius-pill)',
                   color: 'var(--text-muted)',
                   textDecoration: 'none',
-                  fontSize: '0.9rem',
-                  fontWeight: 500
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  transition: 'color 0.2s ease'
                 }}
               >
                 Menu
               </a>
               <a
-                href="#delivery"
+                href="#hostels"
                 style={{
-                  padding: '6px 14px',
+                  padding: '6px 12px',
                   borderRadius: 'var(--radius-pill)',
                   color: 'var(--text-muted)',
                   textDecoration: 'none',
-                  fontSize: '0.9rem',
-                  fontWeight: 500
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  transition: 'color 0.2s ease'
                 }}
               >
-                Delivery
+                Hostels
               </a>
             </>
           )}
@@ -99,17 +150,18 @@ export default function Header() {
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
-              backgroundColor: isStaffViewActive ? 'var(--primary)' : 'var(--secondary)',
-              color: isStaffViewActive ? '#FFFFFF' : 'var(--secondary-foreground)',
-              padding: '6px 14px',
+              backgroundColor: isStaffViewActive ? 'var(--primary)' : '#FFFFFF',
+              color: isStaffViewActive ? '#FFFFFF' : 'var(--text-main)',
+              border: `1px solid ${isStaffViewActive ? 'var(--primary)' : 'var(--border-color)'}`,
+              padding: '7px 14px',
               borderRadius: 'var(--radius-pill)',
-              fontSize: '0.825rem',
-              fontWeight: 600,
-              transition: 'all 0.2s ease'
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              boxShadow: isStaffViewActive ? '0 3px 10px rgba(230,74,25,0.3)' : 'var(--shadow-soft)'
             }}
           >
-            <Store size={15} />
-            {isStaffViewActive ? 'Exit Staff Dashboard' : isAuthenticated ? 'Staff Dashboard' : 'Restaurant Login'}
+            <Store size={14} />
+            {isStaffViewActive ? 'Exit Kitchen' : isAuthenticated ? 'Kitchen Dashboard' : 'Staff Login'}
           </button>
 
           {/* Live Order Tracker Trigger (if user has active order) */}
@@ -117,7 +169,6 @@ export default function Header() {
             <button
               type="button"
               onClick={() => {
-                // Will open live tracker modal
                 window.dispatchEvent(new CustomEvent('open-order-tracker', { detail: activeTrackingOrderId }));
               }}
               style={{
@@ -127,52 +178,49 @@ export default function Header() {
                 backgroundColor: '#FFF3E0',
                 color: 'var(--primary)',
                 border: '1px solid #FFE0B2',
-                padding: '6px 12px',
+                padding: '7px 14px',
                 borderRadius: 'var(--radius-pill)',
-                fontSize: '0.825rem',
-                fontWeight: 600
+                fontSize: '0.8rem',
+                fontWeight: 700,
+                boxShadow: '0 2px 8px rgba(230, 74, 25, 0.15)'
               }}
             >
-              <Clock size={15} />
-              Track #{activeTrackingOrderId}
+              <Clock size={14} className="animate-spin" />
+              Live Order #{activeTrackingOrderId}
             </button>
           )}
 
-          {/* Cart Button */}
+          {/* Cart Header Button */}
           {!isStaffViewActive && (
             <button
               type="button"
               aria-label={`Open cart, ${totalItemCount} items`}
               onClick={() => setIsCartOpen(true)}
               style={{
-                position: 'relative',
-                padding: '8px',
-                borderRadius: '50%',
-                backgroundColor: 'var(--secondary)',
-                color: 'var(--text-main)',
-                display: 'grid',
-                placeItems: 'center',
-                transition: 'transform 0.2s ease'
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '7px 16px',
+                borderRadius: 'var(--radius-pill)',
+                backgroundColor: totalItemCount > 0 ? 'var(--primary)' : '#FFFFFF',
+                color: totalItemCount > 0 ? '#FFFFFF' : 'var(--text-main)',
+                border: `1px solid ${totalItemCount > 0 ? 'var(--primary)' : 'var(--border-color)'}`,
+                boxShadow: totalItemCount > 0 ? '0 4px 14px rgba(230, 74, 25, 0.32)' : 'var(--shadow-soft)',
+                fontWeight: 700,
+                fontSize: '0.875rem'
               }}
             >
-              <ShoppingCart size={20} />
+              <ShoppingBag size={17} />
+              <span>₹{total}</span>
               {totalItemCount > 0 && (
-                <span
-                  style={{
-                    position: 'absolute',
-                    top: '-4px',
-                    right: '-4px',
-                    backgroundColor: 'var(--primary)',
-                    color: '#FFFFFF',
-                    borderRadius: '50%',
-                    width: '20px',
-                    height: '20px',
-                    fontSize: '0.75rem',
-                    fontWeight: 700,
-                    display: 'grid',
-                    placeItems: 'center'
-                  }}
-                >
+                <span style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.28)',
+                  color: '#FFFFFF',
+                  borderRadius: 'var(--radius-pill)',
+                  padding: '1px 8px',
+                  fontSize: '0.75rem',
+                  fontWeight: 800
+                }}>
                   {totalItemCount}
                 </span>
               )}

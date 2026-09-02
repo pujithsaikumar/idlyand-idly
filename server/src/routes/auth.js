@@ -6,9 +6,12 @@ import pool, { inMemoryDB, isDbConnected } from '../db.js';
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_jwt_key_idly_and_idly_2026';
 
-// Default fallback staff user credentials if DB is uninitialized
-const DEFAULT_STAFF_EMAIL = (process.env.STAFF_EMAIL || 'staff@idlyandidly.com').toLowerCase();
-const DEFAULT_STAFF_PASS = process.env.STAFF_PASSWORD || 'Staff@123';
+// Fallback staff credentials list if DB is uninitialized
+const FALLBACK_STAFF_ACCOUNTS = [
+  { email: 'staff@idlyandidly.com', pass: 'Staff@123', role: 'admin' },
+  { email: 'kitchen@idlyandidly.com', pass: 'Kitchen@123', role: 'kitchen' },
+  { email: 'counter@idlyandidly.com', pass: 'Counter@123', role: 'counter' }
+];
 
 router.post('/login', async (req, res) => {
   try {
@@ -33,11 +36,13 @@ router.post('/login', async (req, res) => {
       const inMem = inMemoryDB.staffUsers.find(u => u.email === cleanEmail);
       if (inMem) {
         staffUser = inMem;
-      } else if (cleanEmail === DEFAULT_STAFF_EMAIL) {
-        // Create default on the fly
-        const salt = await bcrypt.genSalt(10);
-        const hash = await bcrypt.hash(DEFAULT_STAFF_PASS, salt);
-        staffUser = { id: 1, email: DEFAULT_STAFF_EMAIL, password_hash: hash, role: 'admin' };
+      } else {
+        const fallbackAcc = FALLBACK_STAFF_ACCOUNTS.find(a => a.email === cleanEmail);
+        if (fallbackAcc) {
+          const salt = await bcrypt.genSalt(10);
+          const hash = await bcrypt.hash(fallbackAcc.pass, salt);
+          staffUser = { id: Math.floor(Math.random() * 1000) + 1, email: fallbackAcc.email, password_hash: hash, role: fallbackAcc.role };
+        }
       }
     }
 
