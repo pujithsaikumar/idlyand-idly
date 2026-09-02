@@ -42,17 +42,31 @@ export function CartProvider({ children }) {
 
   const { subtotal, parcelFee, totalItemCount } = useMemo(() => {
     let sub = 0;
-    let parcel = 0;
     let count = 0;
+    let biryaniParcel = 0;
+    let halfPortionCount = 0;
+    let fullPortionCount = 0;
 
     cartItems.forEach(item => {
       sub += item.price * item.quantity;
       count += item.quantity;
 
-      const isBiryani = item.category === 'Biryani' || item.name.toLowerCase().includes('biriyani');
-      const itemParcelRate = isBiryani ? 10 : 5;
-      parcel += itemParcelRate * item.quantity;
+      const itemName = (item.name || item.item_name || '').toLowerCase();
+      const isBiryani = item.category === 'Biryani' || itemName.includes('biriyani');
+
+      if (isBiryani) {
+        biryaniParcel += 10 * item.quantity;
+      } else if (itemName.includes('2 pcs') || itemName.includes('2pcs')) {
+        // 2-pcs half portion items (e.g. 2 pcs bonda, 2 pcs vada fit together in 1 box)
+        halfPortionCount += item.quantity;
+      } else {
+        fullPortionCount += item.quantity;
+      }
     });
+
+    const halfPortionParcel = Math.ceil(halfPortionCount / 2) * 5;
+    const fullPortionParcel = fullPortionCount * 5;
+    const parcel = biryaniParcel + halfPortionParcel + fullPortionParcel;
 
     return {
       subtotal: sub,

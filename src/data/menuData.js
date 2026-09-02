@@ -6,6 +6,19 @@ export const MENU_CATEGORIES = [
     icon: '🥞',
     items: [
       {
+        id: 'combo_bv',
+        name: 'Combo: Mysore Bonda (2 pcs) + Vada (2 pcs)',
+        price: 50,
+        portion: '2 Bonda + 2 Vada (1 Box)',
+        emoji: '✨',
+        category: 'Tiffins',
+        badge: 'Value Combo 🌟',
+        badgeType: 'bestseller',
+        rating: '5.0',
+        ordersCount: '980+ ordered',
+        desc: 'The best of both worlds! 2 crispy Mysore bondas & 2 crunchy medu vadas packed together in 1 box with all 3 chutneys.'
+      },
+      {
         id: 't1_2',
         name: 'Mysore Bonda (2 pcs)',
         price: 25,

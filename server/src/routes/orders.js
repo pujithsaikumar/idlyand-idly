@@ -63,17 +63,26 @@ router.post('/', async (req, res) => {
 
     // Calculate totals
     let subtotal = 0;
-    let parcel_fee = 0;
+    let biryaniParcel = 0;
+    let halfPortionCount = 0;
+    let fullPortionCount = 0;
 
     const validatedItems = items.map(item => {
       const qty = parseInt(item.quantity) || 1;
       const price = parseFloat(item.price) || 0;
       subtotal += price * qty;
 
-      // Parcel calculation: ₹10 per biryani, ₹5 for other tiffins/dosas
-      const isBiryani = item.category === 'Biryani' || (item.name && item.name.toLowerCase().includes('biriyani'));
-      const feePerItem = isBiryani ? 10 : 5;
-      parcel_fee += feePerItem * qty;
+      const itemName = (item.name || item.item_name || '').toLowerCase();
+      const isBiryani = item.category === 'Biryani' || itemName.includes('biriyani');
+
+      if (isBiryani) {
+        biryaniParcel += 10 * qty;
+      } else if (itemName.includes('2 pcs') || itemName.includes('2pcs')) {
+        // 2-pcs items fit together in 1 parcel container
+        halfPortionCount += qty;
+      } else {
+        fullPortionCount += qty;
+      }
 
       return {
         item_name: item.name,
@@ -81,6 +90,10 @@ router.post('/', async (req, res) => {
         unit_price: price
       };
     });
+
+    const halfPortionParcel = Math.ceil(halfPortionCount / 2) * 5;
+    const fullPortionParcel = fullPortionCount * 5;
+    const parcel_fee = biryaniParcel + halfPortionParcel + fullPortionParcel;
 
     // Delivery fee calculation: if subtotal < 100, ₹20 for VVH/IGH, ₹10 for others. Free if >= 100.
     let delivery_fee = 0;
@@ -395,16 +408,25 @@ router.patch('/:id/modify', async (req, res) => {
 
     // Recalculate totals
     let subtotal = 0;
-    let parcel_fee = 0;
+    let biryaniParcel = 0;
+    let halfPortionCount = 0;
+    let fullPortionCount = 0;
 
     const validatedItems = updatedItemsList.map(item => {
       const qty = parseInt(item.quantity) || 1;
       const price = parseFloat(item.price || item.unit_price) || 0;
       subtotal += price * qty;
 
-      const isBiryani = item.category === 'Biryani' || (item.name || item.item_name || '').toLowerCase().includes('biriyani');
-      const feePerItem = isBiryani ? 10 : 5;
-      parcel_fee += feePerItem * qty;
+      const itemName = (item.name || item.item_name || '').toLowerCase();
+      const isBiryani = item.category === 'Biryani' || itemName.includes('biriyani');
+
+      if (isBiryani) {
+        biryaniParcel += 10 * qty;
+      } else if (itemName.includes('2 pcs') || itemName.includes('2pcs')) {
+        halfPortionCount += qty;
+      } else {
+        fullPortionCount += qty;
+      }
 
       return {
         item_name: item.name || item.item_name,
@@ -412,6 +434,10 @@ router.patch('/:id/modify', async (req, res) => {
         unit_price: price
       };
     });
+
+    const halfPortionParcel = Math.ceil(halfPortionCount / 2) * 5;
+    const fullPortionParcel = fullPortionCount * 5;
+    const parcel_fee = biryaniParcel + halfPortionParcel + fullPortionParcel;
 
     let delivery_fee = 0;
     if (subtotal < 100) {
