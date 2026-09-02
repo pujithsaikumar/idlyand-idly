@@ -206,6 +206,31 @@ export default function RestaurantDashboard() {
 
   const isAdmin = staffUser?.role === 'admin';
 
+  if (!token || !staffUser) {
+    return (
+      <div style={{
+        maxWidth: '500px',
+        margin: '60px auto',
+        padding: '32px',
+        backgroundColor: '#FFFFFF',
+        borderRadius: '24px',
+        border: '1px solid var(--border-color)',
+        textAlign: 'center',
+        boxShadow: 'var(--shadow-modal)'
+      }}>
+        <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: '#FFEBEE', color: '#C62828', display: 'grid', placeItems: 'center', margin: '0 auto 16px' }}>
+          <AlertCircle size={24} />
+        </div>
+        <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '8px' }}>
+          🔒 Restricted Access
+        </h3>
+        <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '20px' }}>
+          You must be an authorized staff member with a valid security token to view this page.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div style={{
       maxWidth: '1100px',

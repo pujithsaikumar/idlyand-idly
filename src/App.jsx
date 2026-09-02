@@ -14,7 +14,7 @@ import { useAuth } from './context/AuthContext';
 import { useCart } from './context/CartContext';
 
 function AppContent() {
-  const { isStaffViewActive } = useAuth();
+  const { isStaffViewActive, isAuthenticated } = useAuth();
   const { activeTrackingOrderId, setActiveTrackingOrderId } = useCart();
 
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
@@ -42,7 +42,7 @@ function AppContent() {
       <Header />
 
       <main style={{ flex: 1 }}>
-        {isStaffViewActive ? (
+        {isStaffViewActive && isAuthenticated ? (
           <RestaurantDashboard />
         ) : (
           <>
