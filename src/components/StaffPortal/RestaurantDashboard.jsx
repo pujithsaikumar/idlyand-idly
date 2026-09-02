@@ -553,28 +553,6 @@ export default function RestaurantDashboard() {
                       <ShieldCheck size={15} /> Verify Payment Received
                     </button>
                   )}
-
-                  {order.order_status !== 'delivered' && order.order_status !== 'cancelled' && (
-                    <button
-                      type="button"
-                      disabled={updatingId === order.id}
-                      onClick={() => handleUpdateStatus(order.id, 'cancelled')}
-                      style={{
-                        backgroundColor: '#FFEBEE',
-                        color: '#C62828',
-                        border: '1px solid #FFCDD2',
-                        padding: '8px 14px',
-                        borderRadius: 'var(--radius-pill)',
-                        fontSize: '0.825rem',
-                        fontWeight: 600,
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px'
-                      }}
-                    >
-                      <XCircle size={15} /> Cancel Order
-                    </button>
-                  )}
                 </div>
               </div>
             );

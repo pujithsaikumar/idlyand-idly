@@ -500,4 +500,51 @@ router.patch('/:id/modify', async (req, res) => {
   }
 });
 
+// -------------------------------------------------------------
+// PATCH /api/orders/:id/cancel (Public 3-Minute Customer Order Cancellation)
+// -------------------------------------------------------------
+router.patch('/:id/cancel', async (req, res) => {
+  try {
+    const orderId = req.params.id;
+    let targetOrder = null;
+
+    if (isDbConnected()) {
+      const orderRes = await pool.query('SELECT * FROM orders WHERE id = $1;', [orderId]);
+      if (orderRes.rows.length === 0) {
+        return res.status(404).json({ error: 'Order not found.' });
+      }
+      targetOrder = orderRes.rows[0];
+    } else {
+      targetOrder = inMemoryDB.orders.find(o => o.id === orderId);
+      if (!targetOrder) {
+        return res.status(404).json({ error: 'Order not found.' });
+      }
+    }
+
+    if (targetOrder.order_status !== 'pending') {
+      return res.status(400).json({ error: 'Order cannot be cancelled once cooking or delivery has started.' });
+    }
+
+    const createdAt = new Date(targetOrder.created_at).getTime();
+    const elapsedSeconds = Math.floor((Date.now() - createdAt) / 1000);
+    if (elapsedSeconds > 180) {
+      return res.status(400).json({ error: 'Order cancellation window has expired (3 minutes limit reached).' });
+    }
+
+    if (isDbConnected()) {
+      const updateRes = await pool.query(
+        `UPDATE orders SET order_status = 'cancelled' WHERE id = $1 RETURNING *;`,
+        [orderId]
+      );
+      return res.json({ success: true, message: 'Order cancelled successfully.', order: updateRes.rows[0] });
+    } else {
+      targetOrder.order_status = 'cancelled';
+      return res.json({ success: true, message: 'Order cancelled successfully.', order: targetOrder });
+    }
+  } catch (err) {
+    console.error('Cancel order error:', err);
+    return res.status(500).json({ error: 'Failed to cancel order.' });
+  }
+});
+
 export default router;
