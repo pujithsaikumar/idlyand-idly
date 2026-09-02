@@ -6,12 +6,19 @@ import pool, { inMemoryDB, isDbConnected } from '../db.js';
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_jwt_key_idly_and_idly_2026';
 
-// Staff & Admin credentials
+// Configured Logins: 1 Admin Account + 2 Dedicated Staff Accounts
 const FALLBACK_STAFF_ACCOUNTS = [
+  // 1. Executive Admin (Full access to Analytics, Settings, Pricing & Orders)
   { email: 'admin@idlyandidly.com', pass: 'Admin@123', role: 'admin' },
-  { email: 'staff@idlyandidly.com', pass: 'Staff@123', role: 'admin' },
-  { email: 'kitchen@idlyandidly.com', pass: 'Kitchen@123', role: 'staff' },
-  { email: 'counter@idlyandidly.com', pass: 'Counter@123', role: 'staff' }
+
+  // 2. Staff Login 1 (Orders Only)
+  { email: 'staff1@idlyandidly.com', pass: 'Staff1@123', role: 'staff' },
+
+  // 3. Staff Login 2 (Orders Only)
+  { email: 'staff2@idlyandidly.com', pass: 'Staff2@123', role: 'staff' },
+
+  // General Staff alias
+  { email: 'staff@idlyandidly.com', pass: 'Staff@123', role: 'staff' }
 ];
 
 router.post('/login', async (req, res) => {
