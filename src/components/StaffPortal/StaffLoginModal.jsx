@@ -17,7 +17,7 @@ export default function StaffLoginModal() {
     setError('');
     setLoading(true);
 
-    const result = await loginStaff(email, password);
+    const result = await loginStaff(email.trim(), password.trim());
     setLoading(false);
 
     if (!result.success) {
