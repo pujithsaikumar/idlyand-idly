@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShoppingBag, ArrowRight, Sparkles } from 'lucide-react';
+import { ShoppingBag, ArrowRight } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 
@@ -15,54 +15,56 @@ export default function FloatingCartDock() {
   return (
     <div style={{
       position: 'fixed',
-      bottom: '18px',
+      bottom: 'calc(10px + env(safe-area-inset-bottom, 0px))',
       left: '0',
       right: '0',
       zIndex: 35,
       display: 'flex',
       justifyContent: 'center',
-      padding: '0 16px',
+      padding: '0 12px',
       pointerEvents: 'none'
     }}>
       <div
         className="animate-slide-up"
         style={{
           pointerEvents: 'auto',
-          maxWidth: '540px',
+          maxWidth: '500px',
           width: '100%',
           backgroundColor: '#1C1311',
           color: '#FFFFFF',
-          borderRadius: '24px',
-          padding: '12px 18px',
+          borderRadius: '20px',
+          padding: '10px 14px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          gap: '14px',
-          boxShadow: '0 16px 36px -4px rgba(28, 19, 17, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.1)',
+          gap: '10px',
+          boxShadow: '0 12px 32px -4px rgba(28, 19, 17, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.12)',
           backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)'
+          WebkitBackdropFilter: 'blur(16px)',
+          boxSizing: 'border-box'
         }}
       >
         {/* Left Side: Count & Free Delivery status */}
-        <div style={{ minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <span style={{
               backgroundColor: 'var(--primary)',
               color: '#FFFFFF',
               borderRadius: 'var(--radius-pill)',
-              padding: '2px 9px',
-              fontSize: '0.8rem',
-              fontWeight: 800
+              padding: '2px 8px',
+              fontSize: '0.75rem',
+              fontWeight: 800,
+              whiteSpace: 'nowrap'
             }}>
               {totalItemCount} {totalItemCount === 1 ? 'item' : 'items'}
             </span>
-            <span style={{ fontSize: '1.15rem', fontWeight: 800, color: '#FFE0B2' }}>
+            <span style={{ fontSize: '1.05rem', fontWeight: 800, color: '#FFE0B2', whiteSpace: 'nowrap' }}>
               ₹{total}
             </span>
           </div>
 
           <p style={{
-            fontSize: '0.75rem',
+            fontSize: '0.72rem',
             color: amountRemainingForFree > 0 ? '#FFCC80' : '#81C784',
             fontWeight: 600,
             marginTop: '2px',
@@ -71,7 +73,7 @@ export default function FloatingCartDock() {
             textOverflow: 'ellipsis'
           }}>
             {amountRemainingForFree > 0
-              ? `Add ₹${amountRemainingForFree} more for FREE delivery`
+              ? `Add ₹${amountRemainingForFree} for FREE delivery`
               : `🎉 FREE Delivery unlocked!`}
           </p>
         </div>
@@ -83,19 +85,19 @@ export default function FloatingCartDock() {
           style={{
             backgroundColor: 'var(--primary)',
             color: '#FFFFFF',
-            padding: '10px 20px',
+            padding: '8px 16px',
             borderRadius: 'var(--radius-pill)',
             fontWeight: 800,
-            fontSize: '0.9rem',
+            fontSize: '0.85rem',
             display: 'inline-flex',
             alignItems: 'center',
-            gap: '8px',
-            boxShadow: '0 4px 14px rgba(230, 74, 25, 0.4)',
+            gap: '6px',
+            boxShadow: '0 3px 12px rgba(230, 74, 25, 0.4)',
             flexShrink: 0
           }}
         >
           <span>View Cart</span>
-          <ArrowRight size={16} />
+          <ArrowRight size={14} />
         </button>
       </div>
     </div>
