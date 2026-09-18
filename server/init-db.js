@@ -66,21 +66,28 @@ async function initDB() {
 
     console.log('✅ PostgreSQL tables created successfully!');
 
-    // 2. Seed Default Staff User
-    const defaultEmail = 'staff@idlyandidly.com';
-    const defaultPassword = 'Staff@123';
-    const salt = await bcrypt.genSalt(10);
-    const hash = await bcrypt.hash(defaultPassword, salt);
+    // 2. Seed Default Admin & Staff Users
+    const accounts = [
+      { email: 'admin@idlyandidly.com', pass: 'Admin@123', role: 'admin' },
+      { email: 'staff1@idlyandidly.com', pass: 'Staff1@123', role: 'staff' },
+      { email: 'staff2@idlyandidly.com', pass: 'Staff2@123', role: 'staff' },
+      { email: 'staff@idlyandidly.com', pass: 'Staff@123', role: 'staff' }
+    ];
 
-    await client.query(`
-      INSERT INTO staff_users (email, password_hash, role)
-      VALUES ($1, $2, 'admin')
-      ON CONFLICT (email) DO NOTHING;
-    `, [defaultEmail, hash]);
+    for (const acc of accounts) {
+      const salt = await bcrypt.genSalt(10);
+      const hash = await bcrypt.hash(acc.pass, salt);
+      await client.query(`
+        INSERT INTO staff_users (email, password_hash, role)
+        VALUES ($1, $2, $3)
+        ON CONFLICT (email) DO UPDATE SET password_hash = $2, role = $3;
+      `, [acc.email, hash, acc.role]);
+    }
 
-    console.log('✅ Default staff user created/seeded:');
-    console.log(`   Email: ${defaultEmail}`);
-    console.log(`   Password: ${defaultPassword}`);
+    console.log('✅ Default staff & admin accounts seeded successfully:');
+    console.log('   👑 Admin: admin@idlyandidly.com / Admin@123');
+    console.log('   🍳 Staff 1: staff1@idlyandidly.com / Staff1@123');
+    console.log('   🍳 Staff 2: staff2@idlyandidly.com / Staff2@123');
 
     console.log('\n🎉 Database setup & initialization complete!');
   } catch (err) {
