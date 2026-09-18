@@ -52,6 +52,18 @@ export default function OrderCheckoutModal({ isOpen, onClose, onOrderPlaced }) {
       return false;
     }
 
+    if (paymentMethod === 'upi') {
+      const cleanUtr = upiUtr.trim();
+      if (!cleanUtr) {
+        setErrorMessage('UPI Reference / UTR Number is REQUIRED. Please complete payment on GPay/PhonePe and paste the 12-digit UTR number.');
+        return false;
+      }
+      if (cleanUtr.length < 6) {
+        setErrorMessage('Please enter a valid UPI Reference / UTR Number (6 to 12 digits).');
+        return false;
+      }
+    }
+
     if (cartItems.length === 0) {
       setErrorMessage('Your cart is empty.');
       return false;
@@ -362,7 +374,7 @@ export default function OrderCheckoutModal({ isOpen, onClose, onOrderPlaced }) {
           {paymentMethod === 'upi' && (
             <div style={{
               backgroundColor: '#FFF8F0',
-              border: '1px solid #FFE0B2',
+              border: '2px solid #FFE0B2',
               borderRadius: '16px',
               padding: '16px',
               display: 'flex',
@@ -370,9 +382,9 @@ export default function OrderCheckoutModal({ isOpen, onClose, onOrderPlaced }) {
               gap: '12px'
             }}>
               {/* Seamless In-App UPI Payment Info */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#E65100' }}>
-                  Pay to Hotel UPI ID:
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#E65100' }}>
+                  Pay ₹{total} to UPI ID:
                 </span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#FFFFFF', padding: '6px 12px', borderRadius: '10px', border: '1px solid #FFE0B2' }}>
                   <code style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-main)' }}>{HOTEL_UPI_ID}</code>
@@ -382,27 +394,52 @@ export default function OrderCheckoutModal({ isOpen, onClose, onOrderPlaced }) {
                 </div>
               </div>
 
+              {/* Direct UPI App Intent Trigger on Mobile */}
+              <a
+                href={upiDeepLink}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  backgroundColor: '#E65100',
+                  color: '#FFFFFF',
+                  padding: '10px 14px',
+                  borderRadius: '12px',
+                  fontSize: '0.85rem',
+                  fontWeight: 700,
+                  textDecoration: 'none',
+                  boxShadow: '0 2px 8px rgba(230, 81, 0, 0.25)'
+                }}
+              >
+                <QrCode size={16} /> Tap to Open GPay / PhonePe / Paytm (₹{total})
+              </a>
+
               <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '4px' }}>
-                  UPI Reference / UTR No. (Optional)
+                <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 800, color: '#C62828', marginBottom: '4px' }}>
+                  12-Digit UPI Reference / UTR No. * (Required)
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. 423910582910 (12 Digits)"
+                  required
+                  maxLength={20}
+                  placeholder="Paste 12-digit UTR from GPay / PhonePe (e.g. 423910582910)"
                   value={upiUtr}
-                  onChange={e => setUpiUtr(e.target.value)}
+                  onChange={e => setUpiUtr(e.target.value.replace(/[^0-9a-zA-Z]/g, ''))}
                   style={{
                     width: '100%',
-                    padding: '8px 12px',
+                    padding: '10px 14px',
                     borderRadius: '10px',
-                    border: '1px solid var(--border-color)',
-                    fontSize: '0.9rem',
+                    border: `2px solid ${!upiUtr.trim() ? '#FF8A65' : '#4CAF50'}`,
+                    fontSize: '0.95rem',
+                    fontWeight: 700,
+                    letterSpacing: '0.04em',
                     outline: 'none',
                     backgroundColor: '#FFFFFF'
                   }}
                 />
-                <p style={{ fontSize: '0.725rem', color: 'var(--text-muted)', marginTop: '3px' }}>
-                  Send ₹{total} to <strong>{HOTEL_UPI_ID}</strong> on GPay / PhonePe / Paytm.
+                <p style={{ fontSize: '0.725rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                  💡 <strong>Step 1:</strong> Pay ₹{total} on GPay/PhonePe ➔ <strong>Step 2:</strong> Copy the 12-digit UTR / Transaction ID from the receipt ➔ <strong>Step 3:</strong> Paste it above to place your order.
                 </p>
               </div>
             </div>
@@ -439,7 +476,7 @@ export default function OrderCheckoutModal({ isOpen, onClose, onOrderPlaced }) {
             ) : (
               <>
                 <ShieldCheck size={20} />
-                {paymentMethod === 'cod' ? `Place Order (Pay ₹${total} COD)` : `Place Order (UPI UTR Submitted)`}
+                {paymentMethod === 'cod' ? `Place Order (Pay ₹${total} COD)` : `Verify UTR & Place Order (₹${total})`}
               </>
             )}
           </button>

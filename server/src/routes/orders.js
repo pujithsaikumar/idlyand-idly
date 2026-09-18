@@ -36,7 +36,8 @@ router.post('/', async (req, res) => {
       items,
       payment_method = 'cod',
       payment_status = 'pending',
-      razorpay_payment_id = null
+      razorpay_payment_id = null,
+      upi_utr = null
     } = req.body;
 
     // 1. Validation Checks
@@ -51,6 +52,16 @@ router.post('/', async (req, res) => {
 
     if (!hostel || !VALID_HOSTELS.includes(hostel)) {
       return res.status(400).json({ error: `Hostel must be one of: ${VALID_HOSTELS.join(', ')}.` });
+    }
+
+    const cleanUpiUtr = upi_utr ? upi_utr.toString().trim() : '';
+    if (payment_method === 'upi') {
+      if (!cleanUpiUtr) {
+        return res.status(400).json({ error: 'UPI Reference / UTR number is required for GPay / PhonePe payments.' });
+      }
+      if (cleanUpiUtr.length < 6) {
+        return res.status(400).json({ error: 'Please enter a valid UPI Reference / UTR number (at least 6-12 digits).' });
+      }
     }
 
     const cleanRoomNumber = room_number ? room_number.toString().trim() : '';
@@ -112,8 +123,8 @@ router.post('/', async (req, res) => {
           INSERT INTO orders (
             id, customer_name, phone, hostel, room_number, notes,
             subtotal, parcel_fee, delivery_fee, total, payment_method, payment_status,
-            order_status, razorpay_payment_id
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+            order_status, razorpay_payment_id, upi_utr
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
           RETURNING *;
         `;
         const orderResult = await client.query(insertOrderQuery, [
@@ -130,7 +141,8 @@ router.post('/', async (req, res) => {
           payment_method,
           payment_status,
           orderStatus,
-          razorpay_payment_id
+          razorpay_payment_id,
+          cleanUpiUtr || null
         ]);
 
         const insertItemQuery = `
