@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { X, CheckCircle2, Clock, Bike, Home, RefreshCw, AlertCircle, Edit3, Plus, Minus, Trash2, Save, User, Phone, MapPin, XCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { X, CheckCircle2, Clock, Bike, Home, RefreshCw, AlertCircle, Edit3, Plus, Minus, Trash2, Save, User, Phone, MapPin, XCircle, ChevronDown, ChevronUp, ShoppingBag } from 'lucide-react';
 import { HOSTEL_LIST, MENU_CATEGORIES } from '../data/menuData';
+import { useStore } from '../context/StoreContext';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
@@ -12,6 +13,8 @@ const STATUS_STEPS = [
 ];
 
 export default function OrderTrackerModal({ orderId, isOpen, onClose }) {
+  const { getItemPrice, isItemOutOfStock } = useStore();
+
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -45,7 +48,14 @@ export default function OrderTrackerModal({ orderId, isOpen, onClose }) {
         setEditName(data.order.customer_name || '');
         setEditPhone(data.order.phone || '');
         setEditHostel(data.order.hostel || HOSTEL_LIST[0]);
-        setEditItems(data.order.items ? data.order.items.map(i => ({ ...i, name: i.item_name || i.name, price: i.unit_price || i.price })) : []);
+        setEditItems(data.order.items ? data.order.items.map(i => ({
+          ...i,
+          name: i.item_name || i.name,
+          item_name: i.item_name || i.name,
+          price: parseFloat(i.unit_price || i.price) || 0,
+          unit_price: parseFloat(i.unit_price || i.price) || 0,
+          quantity: parseInt(i.quantity) || 1
+        })) : []);
       }
       setError('');
     } catch (err) {
@@ -82,6 +92,42 @@ export default function OrderTrackerModal({ orderId, isOpen, onClose }) {
     const timerId = setInterval(updateTimer, 1000);
     return () => clearInterval(timerId);
   }, [order]);
+
+  const editCalculations = useMemo(() => {
+    let subtotal = 0;
+    let biryaniParcel = 0;
+    let halfPortionCount = 0;
+    let fullPortionCount = 0;
+
+    editItems.forEach(item => {
+      const qty = parseInt(item.quantity) || 1;
+      const price = parseFloat(item.price || item.unit_price) || 0;
+      subtotal += price * qty;
+
+      const itemName = (item.name || item.item_name || '').toLowerCase();
+      const isBiryani = (item.category || '').toLowerCase() === 'biryani' || itemName.includes('biryani') || itemName.includes('biriyani');
+
+      if (isBiryani) {
+        biryaniParcel += 10 * qty;
+      } else if (itemName.includes('2 pcs') || itemName.includes('2pcs')) {
+        halfPortionCount += qty;
+      } else {
+        fullPortionCount += qty;
+      }
+    });
+
+    const halfPortionParcel = Math.ceil(halfPortionCount / 2) * 5;
+    const fullPortionParcel = fullPortionCount * 5;
+    const parcelFee = biryaniParcel + halfPortionParcel + fullPortionParcel;
+
+    let deliveryFee = 0;
+    if (subtotal < 100) {
+      deliveryFee = (editHostel === 'VVH Hostel' || editHostel === 'IGH Hostel') ? 20 : 10;
+    }
+
+    const total = subtotal + parcelFee + deliveryFee;
+    return { subtotal, parcelFee, deliveryFee, total };
+  }, [editItems, editHostel]);
 
   if (!isOpen || !orderId) return null;
 
@@ -130,12 +176,25 @@ export default function OrderTrackerModal({ orderId, isOpen, onClose }) {
   };
 
   const handleAddNewItem = (menuItem) => {
+    const price = getItemPrice(menuItem);
     setEditItems(prev => {
-      const existing = prev.find(i => (i.name || i.item_name) === menuItem.name);
-      if (existing) {
-        return prev.map(i => (i.name || i.item_name) === menuItem.name ? { ...i, quantity: i.quantity + 1 } : i);
+      const existingIdx = prev.findIndex(i => (i.name || i.item_name) === menuItem.name);
+      if (existingIdx !== -1) {
+        const next = [...prev];
+        next[existingIdx] = { ...next[existingIdx], quantity: (next[existingIdx].quantity || 1) + 1 };
+        return next;
       }
-      return [...prev, { name: menuItem.name, item_name: menuItem.name, price: menuItem.price, unit_price: menuItem.price, quantity: 1, category: menuItem.category }];
+      return [
+        ...prev,
+        {
+          name: menuItem.name,
+          item_name: menuItem.name,
+          price: price,
+          unit_price: price,
+          quantity: 1,
+          category: menuItem.category
+        }
+      ];
     });
   };
 
@@ -294,13 +353,26 @@ export default function OrderTrackerModal({ orderId, isOpen, onClose }) {
                 </div>
 
                 <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                  You can edit items/details or cancel this order before kitchen preparation begins.
+                  You can add ANY dishes or cancel this order before kitchen preparation begins.
                 </p>
 
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                   <button
                     type="button"
-                    onClick={() => setIsEditMode(true)}
+                    onClick={() => {
+                      setEditName(order.customer_name || '');
+                      setEditPhone(order.phone || '');
+                      setEditHostel(order.hostel || HOSTEL_LIST[0]);
+                      setEditItems(order.items ? order.items.map(i => ({
+                        ...i,
+                        name: i.item_name || i.name,
+                        item_name: i.item_name || i.name,
+                        price: parseFloat(i.unit_price || i.price) || 0,
+                        unit_price: parseFloat(i.unit_price || i.price) || 0,
+                        quantity: parseInt(i.quantity) || 1
+                      })) : []);
+                      setIsEditMode(true);
+                    }}
                     style={{
                       flex: 1,
                       backgroundColor: 'var(--primary)',
@@ -349,14 +421,14 @@ export default function OrderTrackerModal({ orderId, isOpen, onClose }) {
               <form onSubmit={handleSaveOrderChanges} style={{ display: 'flex', flexDirection: 'column', gap: '14px', backgroundColor: '#FFFDF9', padding: '16px', borderRadius: '18px', border: '1px solid var(--border-color)', marginBottom: '16px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px' }}>
                   <h4 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--primary)' }}>
-                    Add Any Items &amp; Update Order
+                    Add Items &amp; Update Order
                   </h4>
                   <button
                     type="button"
                     onClick={() => setIsEditMode(false)}
                     style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textDecoration: 'underline' }}
                   >
-                    Back
+                    Cancel Edit
                   </button>
                 </div>
 
@@ -399,19 +471,23 @@ export default function OrderTrackerModal({ orderId, isOpen, onClose }) {
                 <div>
                   <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '6px' }}>Current Order Items ({editItems.length})</label>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '180px', overflowY: 'auto' }}>
-                    {editItems.map((item, idx) => (
-                      <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#FFFFFF', padding: '8px 12px', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
-                        <div style={{ minWidth: 0 }}>
-                          <span style={{ fontSize: '0.85rem', fontWeight: 700, display: 'block', color: 'var(--text-main)' }}>{item.item_name || item.name}</span>
-                          <span style={{ fontSize: '0.725rem', color: 'var(--text-muted)' }}>₹{item.price || item.unit_price} each</span>
+                    {editItems.length === 0 ? (
+                      <p style={{ fontSize: '0.8rem', color: '#C62828', textAlign: 'center', padding: '10px' }}>Your order is empty. Please add dishes below.</p>
+                    ) : (
+                      editItems.map((item, idx) => (
+                        <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#FFFFFF', padding: '8px 12px', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
+                          <div style={{ minWidth: 0 }}>
+                            <span style={{ fontSize: '0.85rem', fontWeight: 700, display: 'block', color: 'var(--text-main)' }}>{item.item_name || item.name}</span>
+                            <span style={{ fontSize: '0.725rem', color: 'var(--text-muted)' }}>₹{item.price || item.unit_price} each</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <button type="button" onClick={() => handleUpdateItemQty(item.item_name || item.name, -1)} style={{ color: 'var(--primary)', padding: '2px' }}><Minus size={14} /></button>
+                            <span style={{ fontSize: '0.875rem', fontWeight: 800, minWidth: '16px', textAlign: 'center' }}>{item.quantity}</span>
+                            <button type="button" onClick={() => handleUpdateItemQty(item.item_name || item.name, 1)} style={{ color: 'var(--primary)', padding: '2px' }}><Plus size={14} /></button>
+                          </div>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <button type="button" onClick={() => handleUpdateItemQty(item.item_name || item.name, -1)} style={{ color: 'var(--primary)', padding: '2px' }}><Minus size={14} /></button>
-                          <span style={{ fontSize: '0.875rem', fontWeight: 800, minWidth: '16px', textAlign: 'center' }}>{item.quantity}</span>
-                          <button type="button" onClick={() => handleUpdateItemQty(item.item_name || item.name, 1)} style={{ color: 'var(--primary)', padding: '2px' }}><Plus size={14} /></button>
-                        </div>
-                      </div>
-                    ))}
+                      ))
+                    )}
                   </div>
                 </div>
 
@@ -447,45 +523,79 @@ export default function OrderTrackerModal({ orderId, isOpen, onClose }) {
 
                   {/* Dish List for selected category */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '6px', maxHeight: '160px', overflowY: 'auto' }}>
-                    {MENU_CATEGORIES.find(c => c.id === selectedAddCategory)?.items.map(m => (
-                      <div
-                        key={m.id}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          backgroundColor: '#FFFFFF',
-                          padding: '6px 10px',
-                          borderRadius: '8px',
-                          border: '1px solid #EDE4DC'
-                        }}
-                      >
-                        <div style={{ minWidth: 0, flex: 1 }}>
-                          <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{m.emoji} {m.name}</span>
-                          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginLeft: '6px' }}>₹{m.price}</span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleAddNewItem(m)}
+                    {MENU_CATEGORIES.find(c => c.id === selectedAddCategory)?.items.map(m => {
+                      const effectivePrice = getItemPrice(m);
+                      const isSoldOut = isItemOutOfStock(m.id);
+                      const inOrderQty = editItems.find(i => (i.name || i.item_name) === m.name)?.quantity || 0;
+
+                      return (
+                        <div
+                          key={m.id}
                           style={{
-                            backgroundColor: 'var(--primary)',
-                            color: '#FFFFFF',
-                            padding: '3px 8px',
-                            borderRadius: 'var(--radius-pill)',
-                            fontSize: '0.725rem',
-                            fontWeight: 700
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            backgroundColor: '#FFFFFF',
+                            padding: '6px 10px',
+                            borderRadius: '8px',
+                            border: '1px solid #EDE4DC'
                           }}
                         >
-                          + ADD
-                        </button>
-                      </div>
-                    ))}
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{m.emoji} {m.name}</span>
+                            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginLeft: '6px' }}>₹{effectivePrice}</span>
+                            {inOrderQty > 0 && (
+                              <span style={{ fontSize: '0.68rem', backgroundColor: '#E8F5E9', color: '#2E7D32', padding: '1px 6px', borderRadius: '6px', marginLeft: '6px', fontWeight: 700 }}>
+                                {inOrderQty} in order
+                              </span>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            disabled={isSoldOut}
+                            onClick={() => handleAddNewItem(m)}
+                            style={{
+                              backgroundColor: isSoldOut ? '#CCC' : 'var(--primary)',
+                              color: '#FFFFFF',
+                              padding: '4px 10px',
+                              borderRadius: 'var(--radius-pill)',
+                              fontSize: '0.725rem',
+                              fontWeight: 700
+                            }}
+                          >
+                            {isSoldOut ? 'Sold Out' : '+ ADD'}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Live Bill Summary */}
+                <div style={{ backgroundColor: '#FAF7F2', borderRadius: '12px', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.8rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)' }}>
+                    <span>New Subtotal:</span>
+                    <span style={{ fontWeight: 700, color: 'var(--text-main)' }}>₹{editCalculations.subtotal}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)' }}>
+                    <span>Parcel Packaging:</span>
+                    <span style={{ fontWeight: 700, color: 'var(--text-main)' }}>₹{editCalculations.parcelFee}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)' }}>
+                    <span>Delivery Charge ({editHostel}):</span>
+                    <span style={{ fontWeight: 700, color: editCalculations.deliveryFee === 0 ? '#2E7D32' : 'var(--primary)' }}>
+                      {editCalculations.deliveryFee === 0 ? 'FREE (≥ ₹100)' : `₹${editCalculations.deliveryFee}`}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px dashed #DDD', paddingTop: '6px', fontWeight: 800, fontSize: '0.9rem', color: 'var(--primary)' }}>
+                    <span>Updated Total Payable:</span>
+                    <span>₹{editCalculations.total}</span>
                   </div>
                 </div>
 
                 <button
                   type="submit"
-                  disabled={saveLoading}
+                  disabled={saveLoading || editItems.length === 0}
                   style={{
                     backgroundColor: 'var(--primary)',
                     color: '#FFF',
@@ -500,7 +610,7 @@ export default function OrderTrackerModal({ orderId, isOpen, onClose }) {
                     boxShadow: '0 4px 14px rgba(230, 74, 25, 0.35)'
                   }}
                 >
-                  <Save size={16} /> {saveLoading ? 'Updating Order...' : 'Save & Confirm Changes'}
+                  <Save size={16} /> {saveLoading ? 'Updating Order...' : `Save Changes (Pay ₹${editCalculations.total})`}
                 </button>
               </form>
             ) : (
@@ -520,109 +630,109 @@ export default function OrderTrackerModal({ orderId, isOpen, onClose }) {
                   <p style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                     <MapPin size={15} color="var(--primary)" /> {order.hostel}
                   </p>
-                  <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                    {order.customer_name} ({order.phone})
-                  </p>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Total Bill</p>
-                  <p style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--primary)' }}>
-                    ₹{order.total}
-                  </p>
-                  <span style={{ fontSize: '0.7rem', fontWeight: 700, color: order.payment_status === 'paid' ? '#2E7D32' : '#E65100' }}>
-                    {order.payment_status === 'paid' ? 'PAID' : 'COD'}
-                  </span>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Recipient</p>
+                  <p style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-main)' }}>{order.customer_name}</p>
                 </div>
               </div>
             )}
 
-            {/* Timeline Steps */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', position: 'relative', margin: '10px 0 20px 6px' }}>
-              {/* Connecting vertical line */}
-              <div style={{
-                position: 'absolute',
-                top: '16px',
-                bottom: '16px',
-                left: '15px',
-                width: '3px',
-                backgroundColor: '#EFE6DC',
-                zIndex: 0
-              }} />
+            {/* Step Progression Timeline */}
+            {!isEditMode && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', margin: '24px 0 20px 8px' }}>
+                {STATUS_STEPS.map((step, idx) => {
+                  const StepIcon = step.icon;
+                  const isDone = idx < currentStep || (idx === currentStep && currentStep === 3);
+                  const isCurrent = idx === currentStep && currentStep !== 3;
 
-              {STATUS_STEPS.map((step, index) => {
-                const IconComponent = step.icon;
-                const isPassed = index <= currentStep;
-                const isCurrent = index === currentStep;
+                  return (
+                    <div key={step.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', position: 'relative' }}>
+                      {idx < STATUS_STEPS.length - 1 && (
+                        <div style={{
+                          position: 'absolute',
+                          left: '17px',
+                          top: '36px',
+                          bottom: '-18px',
+                          width: '2px',
+                          backgroundColor: idx < currentStep ? '#2E7D32' : 'var(--border-color)'
+                        }} />
+                      )}
 
-                return (
-                  <div key={step.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', zIndex: 1 }}>
-                    <div style={{
-                      width: '32px',
-                      height: '32px',
-                      borderRadius: '50%',
-                      backgroundColor: isPassed ? 'var(--primary)' : '#FFFFFF',
-                      color: isPassed ? '#FFFFFF' : '#B0BEC5',
-                      border: `2px solid ${isPassed ? 'var(--primary)' : '#CFD8DC'}`,
-                      display: 'grid',
-                      placeItems: 'center',
-                      boxShadow: isCurrent ? '0 0 0 4px rgba(230, 81, 0, 0.2)' : 'none',
-                      transition: 'all 0.3s ease',
-                      flexShrink: 0
-                    }}>
-                      {isPassed ? <CheckCircle2 size={16} /> : <IconComponent size={15} />}
-                    </div>
-
-                    <div style={{ flex: 1, paddingTop: '2px' }}>
-                      <p style={{
-                        fontSize: '0.925rem',
-                        fontWeight: isCurrent ? 700 : 600,
-                        color: isPassed ? 'var(--text-main)' : 'var(--text-muted)'
+                      <div style={{
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '50%',
+                        display: 'grid',
+                        placeItems: 'center',
+                        backgroundColor: isDone ? '#E8F5E9' : isCurrent ? '#FFF3E0' : 'var(--secondary)',
+                        color: isDone ? '#2E7D32' : isCurrent ? 'var(--primary)' : 'var(--text-muted)',
+                        border: `2px solid ${isDone ? '#2E7D32' : isCurrent ? 'var(--primary)' : 'var(--border-color)'}`,
+                        zIndex: 1,
+                        boxShadow: isCurrent ? '0 0 0 4px rgba(230, 74, 25, 0.15)' : 'none'
                       }}>
-                        {step.title}
-                        {isCurrent && (
-                          <span style={{
-                            marginLeft: '8px',
-                            fontSize: '0.68rem',
-                            backgroundColor: 'var(--primary)',
-                            color: '#FFFFFF',
-                            padding: '2px 7px',
-                            borderRadius: 'var(--radius-pill)'
-                          }}>
-                            Active
-                          </span>
-                        )}
-                      </p>
-                      <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                        {step.desc}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                        {isDone ? <CheckCircle2 size={18} /> : <StepIcon size={18} className={isCurrent ? 'animate-pulse' : ''} />}
+                      </div>
 
-            {/* Items Summary list */}
-            {order.items && order.items.length > 0 && (
-              <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '14px' }}>
-                <p style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px' }}>
-                  Ordered Items ({order.items.length})
-                </p>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                  {order.items.map((item, idx) => (
-                    <span
-                      key={idx}
-                      style={{
-                        backgroundColor: 'var(--secondary)',
-                        padding: '4px 9px',
-                        borderRadius: '8px',
-                        fontSize: '0.78rem',
-                        color: 'var(--text-main)',
-                        fontWeight: 600
-                      }}
-                    >
-                      {item.quantity}x {item.item_name || item.name}
-                    </span>
+                      <div style={{ flex: 1, paddingTop: '4px' }}>
+                        <p style={{
+                          fontSize: '0.95rem',
+                          fontWeight: isCurrent || isDone ? 700 : 500,
+                          color: isCurrent ? 'var(--primary)' : isDone ? '#2E7D32' : 'var(--text-muted)'
+                        }}>
+                          {step.title}
+                        </p>
+                        <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{step.desc}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Bill Summary Drawer */}
+            {!isEditMode && (
+              <div style={{
+                backgroundColor: 'var(--secondary)',
+                borderRadius: '16px',
+                padding: '14px',
+                border: '1px solid var(--border-color)'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-main)' }}>Items in Order</span>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                    Payment: <strong style={{ textTransform: 'uppercase', color: order.payment_status === 'paid' ? '#2E7D32' : 'var(--primary)' }}>{order.payment_method} · {order.payment_status}</strong>
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '10px' }}>
+                  {order.items?.map((item, idx) => (
+                    <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.825rem' }}>
+                      <span>{item.quantity}x {item.item_name || item.name}</span>
+                      <span style={{ fontWeight: 600 }}>₹{(parseFloat(item.unit_price || item.price) * item.quantity)}</span>
+                    </div>
                   ))}
+                </div>
+
+                <div style={{ borderTop: '1px dashed var(--border-color)', paddingTop: '8px', display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Items Subtotal:</span>
+                    <span>₹{order.subtotal}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Parcel Packaging:</span>
+                    <span>₹{order.parcel_fee}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Delivery ({order.hostel}):</span>
+                    <span style={{ color: parseFloat(order.delivery_fee) === 0 ? '#2E7D32' : 'inherit', fontWeight: 600 }}>
+                      {parseFloat(order.delivery_fee) === 0 ? 'FREE' : `₹${order.delivery_fee}`}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--border-color)', paddingTop: '6px', fontSize: '0.95rem', fontWeight: 800, color: 'var(--primary)' }}>
+                    <span>Grand Total:</span>
+                    <span>₹{order.total}</span>
+                  </div>
                 </div>
               </div>
             )}

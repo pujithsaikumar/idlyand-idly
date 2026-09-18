@@ -1,15 +1,16 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { MENU_CATEGORIES } from '../data/menuData';
 
 const StoreContext = createContext();
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 const STORAGE_KEY_SETTINGS = 'idly_store_settings_v1';
 const STORAGE_KEY_PRICES = 'idly_custom_prices_v1';
 const STORAGE_KEY_OUT_OF_STOCK = 'idly_out_of_stock_v1';
 
 export function StoreProvider({ children }) {
   // Store status: Open / Closed
-  const [isStoreOpen, setIsStoreOpen] = useState(() => {
+  const [isStoreOpen, setIsStoreOpenState] = useState(() => {
     const saved = localStorage.getItem(STORAGE_KEY_SETTINGS);
     if (saved) {
       try {
@@ -21,7 +22,7 @@ export function StoreProvider({ children }) {
   });
 
   // Delivery time estimate (e.g. "20–25 mins")
-  const [deliveryTimeEstimate, setDeliveryTimeEstimate] = useState(() => {
+  const [deliveryTimeEstimate, setDeliveryTimeEstimateState] = useState(() => {
     const saved = localStorage.getItem(STORAGE_KEY_SETTINGS);
     if (saved) {
       try {
@@ -33,7 +34,7 @@ export function StoreProvider({ children }) {
   });
 
   // Top banner custom announcement message
-  const [announcementText, setAnnouncementText] = useState(() => {
+  const [announcementText, setAnnouncementTextState] = useState(() => {
     const saved = localStorage.getItem(STORAGE_KEY_SETTINGS);
     if (saved) {
       try {
@@ -45,7 +46,7 @@ export function StoreProvider({ children }) {
   });
 
   // Custom live pricing overrides: { [itemId]: price }
-  const [customPrices, setCustomPrices] = useState(() => {
+  const [customPrices, setCustomPricesState] = useState(() => {
     const saved = localStorage.getItem(STORAGE_KEY_PRICES);
     if (saved) {
       try {
@@ -56,7 +57,7 @@ export function StoreProvider({ children }) {
   });
 
   // Out of stock item IDs: ['t1', 'd3']
-  const [outOfStockItemIds, setOutOfStockItemIds] = useState(() => {
+  const [outOfStockItemIds, setOutOfStockItemIdsState] = useState(() => {
     const saved = localStorage.getItem(STORAGE_KEY_OUT_OF_STOCK);
     if (saved) {
       try {
@@ -66,52 +67,94 @@ export function StoreProvider({ children }) {
     return [];
   });
 
-  // Save settings whenever they change
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify({
-      isStoreOpen,
-      deliveryTimeEstimate,
-      announcementText
-    }));
-  }, [isStoreOpen, deliveryTimeEstimate, announcementText]);
+  // Sync settings with Backend API in real-time
+  const fetchRemoteSettings = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/store`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.settings) {
+          if (data.settings.isStoreOpen !== undefined) setIsStoreOpenState(data.settings.isStoreOpen);
+          if (data.settings.deliveryTimeEstimate) setDeliveryTimeEstimateState(data.settings.deliveryTimeEstimate);
+          if (data.settings.announcementText) setAnnouncementTextState(data.settings.announcementText);
+          if (data.settings.customPrices) setCustomPricesState(data.settings.customPrices);
+          if (data.settings.outOfStockItemIds) setOutOfStockItemIdsState(data.settings.outOfStockItemIds);
+        }
+      }
+    } catch (e) {
+      // Quietly use local cache on offline
+    }
+  }, []);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_PRICES, JSON.stringify(customPrices));
-  }, [customPrices]);
+    fetchRemoteSettings();
+    const interval = setInterval(fetchRemoteSettings, 8000);
+    return () => clearInterval(interval);
+  }, [fetchRemoteSettings]);
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_OUT_OF_STOCK, JSON.stringify(outOfStockItemIds));
-  }, [outOfStockItemIds]);
+  // Helper to push updates to backend
+  const pushUpdateToBackend = async (partialUpdate) => {
+    try {
+      const token = localStorage.getItem('idly_staff_token');
+      await fetch(`${API_BASE_URL}/store`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify(partialUpdate)
+      });
+    } catch (e) {
+      console.warn('Sync to backend warning:', e);
+    }
+  };
+
+  // Updaters
+  const setIsStoreOpen = (val) => {
+    setIsStoreOpenState(val);
+    pushUpdateToBackend({ isStoreOpen: val });
+  };
+
+  const setDeliveryTimeEstimate = (val) => {
+    setDeliveryTimeEstimateState(val);
+    pushUpdateToBackend({ deliveryTimeEstimate: val });
+  };
+
+  const setAnnouncementText = (val) => {
+    setAnnouncementTextState(val);
+    pushUpdateToBackend({ announcementText: val });
+  };
 
   const updateStoreSettings = (newSettings) => {
-    if (newSettings.isStoreOpen !== undefined) setIsStoreOpen(newSettings.isStoreOpen);
-    if (newSettings.deliveryTimeEstimate !== undefined) setDeliveryTimeEstimate(newSettings.deliveryTimeEstimate);
-    if (newSettings.announcementText !== undefined) setAnnouncementText(newSettings.announcementText);
+    if (newSettings.isStoreOpen !== undefined) setIsStoreOpenState(newSettings.isStoreOpen);
+    if (newSettings.deliveryTimeEstimate !== undefined) setDeliveryTimeEstimateState(newSettings.deliveryTimeEstimate);
+    if (newSettings.announcementText !== undefined) setAnnouncementTextState(newSettings.announcementText);
+    pushUpdateToBackend(newSettings);
   };
 
   const updateItemPrice = (itemId, newPrice) => {
-    setCustomPrices(prev => ({
-      ...prev,
-      [itemId]: parseFloat(newPrice) || 0
-    }));
+    const parsed = parseFloat(newPrice) || 0;
+    const nextPrices = { ...customPrices, [itemId]: parsed };
+    setCustomPricesState(nextPrices);
+    localStorage.setItem(STORAGE_KEY_PRICES, JSON.stringify(nextPrices));
+    pushUpdateToBackend({ customPrices: nextPrices });
   };
 
   const toggleItemStock = (itemId) => {
-    setOutOfStockItemIds(prev => {
-      if (prev.includes(itemId)) {
-        return prev.filter(id => id !== itemId);
-      } else {
-        return [...prev, itemId];
-      }
-    });
+    const nextStock = outOfStockItemIds.includes(itemId)
+      ? outOfStockItemIds.filter(id => id !== itemId)
+      : [...outOfStockItemIds, itemId];
+    setOutOfStockItemIdsState(nextStock);
+    localStorage.setItem(STORAGE_KEY_OUT_OF_STOCK, JSON.stringify(nextStock));
+    pushUpdateToBackend({ outOfStockItemIds: nextStock });
   };
 
   // Helper to get effective price of an item
   const getItemPrice = (item) => {
-    if (customPrices[item.id] !== undefined) {
+    if (item && item.id && customPrices[item.id] !== undefined) {
       return customPrices[item.id];
     }
-    return item.price;
+    return item?.price || 0;
   };
 
   const isItemOutOfStock = (itemId) => {
