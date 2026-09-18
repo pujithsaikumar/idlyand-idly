@@ -766,9 +766,9 @@ export default function RestaurantDashboard() {
       )}
 
       {/* ============================================================= */}
-      {/* TAB 2: DAILY ORDERS ANALYTICS                                  */}
+      {/* TAB 2: DAILY ORDERS ANALYTICS (ADMIN ONLY)                   */}
       {/* ============================================================= */}
-      {activeMainTab === 'analytics' && (
+      {isAdmin && activeMainTab === 'analytics' && (
         <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {/* Top Metric Summary Cards */}
           <div style={{
@@ -915,9 +915,9 @@ export default function RestaurantDashboard() {
       )}
 
       {/* ============================================================= */}
-      {/* TAB 3: PRICE SETTINGS & STORE CONTROLS                        */}
+      {/* TAB 3: PRICE SETTINGS & STORE CONTROLS (ADMIN ONLY)           */}
       {/* ============================================================= */}
-      {activeMainTab === 'settings' && (
+      {isAdmin && activeMainTab === 'settings' && (
         <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {/* Store Open / Closed & Delivery Time Controls */}
           <div style={{
