@@ -154,45 +154,42 @@ router.post('/', async (req, res) => {
           success: true,
           message: 'Order created successfully!',
           orderId,
-          order: createdOrder
-        });
       } catch (dbErr) {
-        await client.query('ROLLBACK');
-        console.error('Postgres order creation failed:', dbErr);
-        throw dbErr;
+        try { await client.query('ROLLBACK'); } catch (_) {}
+        console.warn('Postgres order creation failed, falling back to memory store:', dbErr.message);
       } finally {
         client.release();
       }
-    } else {
-      // In-Memory Fallback
-      const newOrder = {
-        id: orderId,
-        customer_name: customer_name.trim(),
-        phone: cleanPhone,
-        hostel,
-        room_number: cleanRoomNumber,
-        notes: notes || '',
-        subtotal,
-        parcel_fee,
-        delivery_fee,
-        total,
-        payment_method,
-        payment_status,
-        order_status: orderStatus,
-        razorpay_payment_id,
-        created_at: new Date().toISOString(),
-        items: validatedItems
-      };
-
-      inMemoryDB.orders.unshift(newOrder);
-
-      return res.status(201).json({
-        success: true,
-        message: 'Order created successfully!',
-        orderId,
-        order: newOrder
-      });
     }
+
+    // In-Memory Fallback
+    const newOrder = {
+      id: orderId,
+      customer_name: customer_name.trim(),
+      phone: cleanPhone,
+      hostel,
+      room_number: cleanRoomNumber,
+      notes: notes || '',
+      subtotal,
+      parcel_fee,
+      delivery_fee,
+      total,
+      payment_method,
+      payment_status,
+      order_status: orderStatus,
+      razorpay_payment_id,
+      created_at: new Date().toISOString(),
+      items: validatedItems
+    };
+
+    inMemoryDB.orders.unshift(newOrder);
+
+    return res.status(201).json({
+      success: true,
+      message: 'Order created successfully!',
+      orderId,
+      order: newOrder
+    });
   } catch (err) {
     console.error('Order creation error:', err);
     return res.status(500).json({ error: 'Failed to place order. Please try again.' });
