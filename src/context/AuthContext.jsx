@@ -37,10 +37,17 @@ export function AuthProvider({ children }) {
         body: JSON.stringify({ email, password })
       });
 
-      const data = await response.json();
+      const contentType = response.headers.get('content-type') || '';
+      let data = {};
+      if (contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        data = { error: text || 'Server response error.' };
+      }
 
       if (!response.ok) {
-        throw new Error(data.error || 'Authentication failed.');
+        throw new Error(data.error || 'Authentication failed. Please check credentials.');
       }
 
       setToken(data.token);

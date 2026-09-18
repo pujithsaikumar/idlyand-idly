@@ -4,7 +4,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://idly-and-idly-backend.onrender.com/api/:path*"
+      "destination": "https://idlyand-idly.onrender.com/api/:path*"
     },
     {
       "source": "/(.*)",
