@@ -36,13 +36,13 @@ export default function RestaurantDashboard() {
 
   const handleRefreshClick = async () => {
     setRefreshing(true);
-    await fetchOrders();
+    await fetchOrders(false);
     setTimeout(() => setRefreshing(false), 600);
   };
 
-  const fetchOrders = async () => {
+  const fetchOrders = async (isSilent = false) => {
     if (!token) return;
-    setLoading(true);
+    if (!isSilent) setLoading(true);
 
     try {
       const url = activeFilter === 'all'
@@ -65,15 +65,15 @@ export default function RestaurantDashboard() {
       setError('');
     } catch (err) {
       console.error('Fetch orders error:', err);
-      setError(err.message);
+      if (!isSilent) setError(err.message);
     } finally {
-      setLoading(false);
+      if (!isSilent) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchOrders();
-    const interval = setInterval(fetchOrders, 6000);
+    fetchOrders(false);
+    const interval = setInterval(() => fetchOrders(true), 3500);
     return () => clearInterval(interval);
   }, [token, activeFilter]);
 
