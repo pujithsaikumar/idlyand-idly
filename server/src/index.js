@@ -34,6 +34,8 @@ app.use(cors({
 
 app.use(express.json());
 
+import pool, { isDbConnected } from './db.js';
+
 // Health Check
 app.get('/api/health', (req, res) => {
   res.json({
@@ -41,6 +43,32 @@ app.get('/api/health', (req, res) => {
     service: 'Idly & Idly Backend Service',
     time: new Date().toISOString()
   });
+});
+
+// Database Status & Supabase Rows Diagnostic Endpoint
+app.get('/api/db-status', async (req, res) => {
+  try {
+    if (isDbConnected()) {
+      const result = await pool.query('SELECT count(*) FROM orders;');
+      const recent = await pool.query('SELECT id, customer_name, hostel, total, payment_method, upi_utr, created_at FROM orders ORDER BY created_at DESC LIMIT 10;');
+      return res.json({
+        database: 'connected',
+        type: 'PostgreSQL (Supabase)',
+        total_orders_in_supabase: parseInt(result.rows[0].count),
+        recent_orders: recent.rows
+      });
+    } else {
+      return res.json({
+        database: 'in-memory-fallback',
+        message: 'PostgreSQL pool is not connected'
+      });
+    }
+  } catch (err) {
+    return res.status(500).json({
+      database: 'error',
+      error: err.message
+    });
+  }
 });
 
 // API Routes
