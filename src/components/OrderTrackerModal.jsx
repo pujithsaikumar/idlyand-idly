@@ -24,6 +24,12 @@ export default function OrderTrackerModal({ orderId, isOpen, onClose }) {
   const [isEditMode, setIsEditMode] = useState(false);
   const [cancelLoading, setCancelLoading] = useState(false);
 
+  // Use a ref to ensure polling NEVER overwrites active user typing/editing
+  const isEditModeRef = React.useRef(isEditMode);
+  useEffect(() => {
+    isEditModeRef.current = isEditMode;
+  }, [isEditMode]);
+
   // Editable fields
   const [editName, setEditName] = useState('');
   const [editPhone, setEditPhone] = useState('');
@@ -33,7 +39,7 @@ export default function OrderTrackerModal({ orderId, isOpen, onClose }) {
   const [selectedAddCategory, setSelectedAddCategory] = useState(MENU_CATEGORIES[0].id);
 
   const fetchOrderStatus = async () => {
-    if (!orderId) return;
+    if (!orderId || isEditModeRef.current) return;
 
     try {
       const response = await fetch(`${API_BASE_URL}/orders/${orderId}`);
@@ -44,7 +50,7 @@ export default function OrderTrackerModal({ orderId, isOpen, onClose }) {
       }
 
       setOrder(data.order);
-      if (!isEditMode) {
+      if (!isEditModeRef.current) {
         setEditName(data.order.customer_name || '');
         setEditPhone(data.order.phone || '');
         setEditHostel(data.order.hostel || HOSTEL_LIST[0]);
@@ -67,12 +73,12 @@ export default function OrderTrackerModal({ orderId, isOpen, onClose }) {
   };
 
   useEffect(() => {
-    if (isOpen && orderId) {
+    if (isOpen && orderId && !isEditMode) {
       fetchOrderStatus();
       const interval = setInterval(fetchOrderStatus, 4000);
       return () => clearInterval(interval);
     }
-  }, [isOpen, orderId]);
+  }, [isOpen, orderId, isEditMode]);
 
   // Timer countdown for 3-minute edit window
   useEffect(() => {
@@ -223,8 +229,19 @@ export default function OrderTrackerModal({ orderId, isOpen, onClose }) {
       }
 
       setOrder(data.order);
+      setEditName(data.order.customer_name || '');
+      setEditPhone(data.order.phone || '');
+      setEditHostel(data.order.hostel || HOSTEL_LIST[0]);
+      setEditItems(data.order.items ? data.order.items.map(i => ({
+        ...i,
+        name: i.item_name || i.name,
+        item_name: i.item_name || i.name,
+        price: parseFloat(i.unit_price || i.price) || 0,
+        unit_price: parseFloat(i.unit_price || i.price) || 0,
+        quantity: parseInt(i.quantity) || 1
+      })) : []);
       setIsEditMode(false);
-      alert('Order & items updated successfully!');
+      alert('✅ Order & items updated successfully!');
     } catch (err) {
       alert('Edit Error: ' + err.message);
     } finally {
