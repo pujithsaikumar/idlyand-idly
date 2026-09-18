@@ -6,12 +6,13 @@ dotenv.config();
 const { Pool } = pg;
 
 let pool = null;
+const DB_CONNECTION_STRING = process.env.DATABASE_URL || 'postgresql://postgres:Pujith%402714@db.ipxenceldxhjeogyfikk.supabase.co:5432/postgres';
 
-if (process.env.DATABASE_URL) {
+if (DB_CONNECTION_STRING) {
   try {
     pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-      ssl: process.env.DATABASE_URL.includes('localhost') ? false : { rejectUnauthorized: false },
+      connectionString: DB_CONNECTION_STRING,
+      ssl: DB_CONNECTION_STRING.includes('localhost') ? false : { rejectUnauthorized: false },
       connectionTimeoutMillis: 10000,
       idleTimeoutMillis: 30000,
       max: 20
@@ -21,7 +22,7 @@ if (process.env.DATABASE_URL) {
       console.error('Unexpected idle client error in PostgreSQL pool:', err.message);
     });
 
-    console.log('PostgreSQL database pool created.');
+    console.log('PostgreSQL Supabase database pool connected successfully.');
   } catch (err) {
     console.error('Failed to initialize PostgreSQL pool:', err);
   }
