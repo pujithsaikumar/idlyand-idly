@@ -33,9 +33,13 @@ router.post('/login', async (req, res) => {
     let staffUser = null;
 
     if (isDbConnected()) {
-      const result = await pool.query('SELECT * FROM staff_users WHERE email = $1', [cleanEmail]);
-      if (result.rows.length > 0) {
-        staffUser = result.rows[0];
+      try {
+        const result = await pool.query('SELECT * FROM staff_users WHERE email = $1', [cleanEmail]);
+        if (result.rows.length > 0) {
+          staffUser = result.rows[0];
+        }
+      } catch (dbErr) {
+        console.warn('Database query fallback:', dbErr.message);
       }
     }
 
