@@ -154,6 +154,8 @@ router.post('/', async (req, res) => {
           success: true,
           message: 'Order created successfully!',
           orderId,
+          order: createdOrder
+        });
       } catch (dbErr) {
         try { await client.query('ROLLBACK'); } catch (_) {}
         console.warn('Postgres order creation failed, falling back to memory store:', dbErr.message);
