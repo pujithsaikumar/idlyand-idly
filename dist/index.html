@@ -13,6 +13,56 @@
     
     <!-- Razorpay Checkout Script -->
     <script src="https://checkout.razorpay.com/v1/checkout.js" async></script>
+
+    <!-- Client-Side Security Shield (Disables Right-Click, F12, Inspect Element) -->
+    <script>
+      (function() {
+        // Disable Right-Click Context Menu
+        document.addEventListener('contextmenu', function(e) {
+          e.preventDefault();
+          return false;
+        });
+
+        // Block DevTools & Source View Shortcut Keys
+        document.addEventListener('keydown', function(e) {
+          // F12 Key
+          if (e.key === 'F12' || e.keyCode === 123) {
+            e.preventDefault();
+            return false;
+          }
+
+          // Ctrl+Shift+I (Windows Inspect) or Cmd+Option+I (Mac Inspect)
+          if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.keyCode === 73)) {
+            e.preventDefault();
+            return false;
+          }
+
+          // Ctrl+Shift+J (Windows Console) or Cmd+Option+J (Mac Console)
+          if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'J' || e.key === 'j' || e.keyCode === 74)) {
+            e.preventDefault();
+            return false;
+          }
+
+          // Ctrl+Shift+C (Inspect Element target)
+          if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'C' || e.key === 'c' || e.keyCode === 67)) {
+            e.preventDefault();
+            return false;
+          }
+
+          // Ctrl+U (View Source)
+          if ((e.ctrlKey || e.metaKey) && (e.key === 'U' || e.key === 'u' || e.keyCode === 85)) {
+            e.preventDefault();
+            return false;
+          }
+
+          // Ctrl+S (Save Page)
+          if ((e.ctrlKey || e.metaKey) && (e.key === 'S' || e.key === 's' || e.keyCode === 83)) {
+            e.preventDefault();
+            return false;
+          }
+        });
+      })();
+    </script>
     <script type="module" crossorigin src="/assets/index-CEykkkH4.js"></script>
     <link rel="stylesheet" crossorigin href="/assets/index-BKWnRax-.css">
   </head>
