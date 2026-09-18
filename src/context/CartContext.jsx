@@ -52,7 +52,7 @@ export function CartProvider({ children }) {
       count += item.quantity;
 
       const itemName = (item.name || item.item_name || '').toLowerCase();
-      const isBiryani = item.category === 'Biryani' || itemName.includes('biriyani');
+      const isBiryani = (item.category || '').toLowerCase() === 'biryani' || itemName.includes('biryani') || itemName.includes('biriyani');
 
       if (isBiryani) {
         biryaniParcel += 10 * item.quantity;
