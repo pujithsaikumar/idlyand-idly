@@ -193,6 +193,7 @@ router.post('/', async (req, res) => {
       payment_status,
       order_status: orderStatus,
       razorpay_payment_id,
+      upi_utr: cleanUpiUtr || null,
       created_at: new Date().toISOString(),
       items: validatedItems
     };

@@ -513,7 +513,7 @@ export default function RestaurantDashboard() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               {orders.map(order => {
                 const isPaid = order.payment_status === 'paid';
-                const isUpi = order.payment_method === 'upi';
+                const isUpi = (order.payment_method || '').toLowerCase() === 'upi' || Boolean(order.upi_utr);
 
                 return (
                   <div
@@ -613,9 +613,23 @@ export default function RestaurantDashboard() {
                           <MapPin size={15} color="var(--primary)" /> {order.hostel}
                         </p>
                         {isUpi && (
-                          <p style={{ fontSize: '0.75rem', color: '#E65100', fontWeight: 600, marginTop: '2px' }}>
-                            UTR: <strong>{order.upi_utr || 'Not provided'}</strong>
-                          </p>
+                          <div style={{
+                            marginTop: '6px',
+                            backgroundColor: '#FFF3E0',
+                            border: '1px solid #FFE0B2',
+                            padding: '4px 8px',
+                            borderRadius: '8px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                          }}>
+                            <span style={{ fontSize: '0.725rem', fontWeight: 800, color: '#E65100' }}>
+                              📱 UTR:
+                            </span>
+                            <code style={{ fontSize: '0.85rem', fontWeight: 800, color: '#1C1311', letterSpacing: '0.04em' }}>
+                              {order.upi_utr || 'Not submitted'}
+                            </code>
+                          </div>
                         )}
                       </div>
 
