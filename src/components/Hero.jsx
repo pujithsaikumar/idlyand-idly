@@ -238,7 +238,7 @@ export default function Hero() {
             filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.5))',
             letterSpacing: '4px'
           }}>
-            🥞 🍩 ⚪ 🍛
+            🥞 🍩 🍚 🍛
           </div>
 
           <div style={{

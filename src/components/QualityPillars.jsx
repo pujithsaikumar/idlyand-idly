@@ -9,7 +9,7 @@ export default function QualityPillars() {
       desc: 'Ground fresh using fresh grated coconut, roasted Guntur chillies, and ginger. Never refrigerated or preserved.'
     },
     {
-      icon: '🧈',
+      icon: '✨',
       title: 'Pure Desi Ghee & Cold Pressed Oils',
       desc: 'Authentic cow ghee and traditional wood-pressed groundnut oil for signature aroma, crispiness, and digestability.'
     },
