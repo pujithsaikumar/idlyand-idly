@@ -17,14 +17,13 @@ const VALID_HOSTELS = [
 
 const VALID_ORDER_STATUSES = ['pending', 'preparing', 'en_route', 'delivered', 'cancelled'];
 
-// Helper to generate readable Order ID (e.g., IDLY-8924)
 function generateOrderId() {
   const randomNum = Math.floor(1000 + Math.random() * 9000);
   return `IDLY-${randomNum}`;
 }
 
 // -------------------------------------------------------------
-// POST /api/orders (Public Customer Checkout)
+// POST /api/orders (Customer Checkout Endpoint)
 // -------------------------------------------------------------
 router.post('/', async (req, res) => {
   try {
@@ -54,14 +53,13 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: `Hostel must be one of: ${VALID_HOSTELS.join(', ')}.` });
     }
 
-    // Room number is optional now
     const cleanRoomNumber = room_number ? room_number.toString().trim() : '';
 
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ error: 'Cart must contain at least one item.' });
     }
 
-    // Calculate totals
+    // 2. Calculate totals
     let subtotal = 0;
     let biryaniParcel = 0;
     let halfPortionCount = 0;
@@ -78,14 +76,13 @@ router.post('/', async (req, res) => {
       if (isBiryani) {
         biryaniParcel += 10 * qty;
       } else if (itemName.includes('2 pcs') || itemName.includes('2pcs')) {
-        // 2-pcs items fit together in 1 parcel container
         halfPortionCount += qty;
       } else {
         fullPortionCount += qty;
       }
 
       return {
-        item_name: item.name,
+        item_name: item.name || item.item_name,
         quantity: qty,
         unit_price: price
       };
@@ -95,7 +92,6 @@ router.post('/', async (req, res) => {
     const fullPortionParcel = fullPortionCount * 5;
     const parcel_fee = biryaniParcel + halfPortionParcel + fullPortionParcel;
 
-    // Delivery fee calculation: if subtotal < 100, ₹20 for VVH/IGH, ₹10 for others. Free if >= 100.
     let delivery_fee = 0;
     if (subtotal < 100) {
       delivery_fee = (hostel === 'VVH Hostel' || hostel === 'IGH Hostel') ? 20 : 10;
@@ -105,10 +101,11 @@ router.post('/', async (req, res) => {
     const orderId = generateOrderId();
     const orderStatus = 'pending';
 
-    // Save to Postgres DB or In-Memory Store
+    // 3. Attempt PostgreSQL Database Save
     if (isDbConnected()) {
-      const client = await pool.connect();
+      let client = null;
       try {
+        client = await pool.connect();
         await client.query('BEGIN');
 
         const insertOrderQuery = `
@@ -157,14 +154,18 @@ router.post('/', async (req, res) => {
           order: createdOrder
         });
       } catch (dbErr) {
-        try { await client.query('ROLLBACK'); } catch (_) {}
-        console.warn('Postgres order creation failed, falling back to memory store:', dbErr.message);
+        if (client) {
+          try { await client.query('ROLLBACK'); } catch (_) {}
+        }
+        console.warn('Postgres order creation failed, using memory store:', dbErr.message);
       } finally {
-        client.release();
+        if (client) {
+          client.release();
+        }
       }
     }
 
-    // In-Memory Fallback
+    // 4. In-Memory Fallback
     const newOrder = {
       id: orderId,
       customer_name: customer_name.trim(),
@@ -206,37 +207,41 @@ router.get('/', authenticateStaffToken, async (req, res) => {
     const { status } = req.query;
 
     if (isDbConnected()) {
-      let queryText = `
-        SELECT o.*, 
-               COALESCE(json_agg(
-                 json_build_object(
-                   'id', i.id,
-                   'item_name', i.item_name,
-                   'quantity', i.quantity,
-                   'unit_price', i.unit_price
-                 )
-               ) FILTER (WHERE i.id IS NOT NULL), '[]') AS items
-        FROM orders o
-        LEFT JOIN order_items i ON o.id = i.order_id
-      `;
+      try {
+        let queryText = `
+          SELECT o.*, 
+                 COALESCE(json_agg(
+                   json_build_object(
+                     'id', i.id,
+                     'item_name', i.item_name,
+                     'quantity', i.quantity,
+                     'unit_price', i.unit_price
+                   )
+                 ) FILTER (WHERE i.id IS NOT NULL), '[]') AS items
+          FROM orders o
+          LEFT JOIN order_items i ON o.id = i.order_id
+        `;
 
-      const params = [];
-      if (status && VALID_ORDER_STATUSES.includes(status)) {
-        queryText += ` WHERE o.order_status = $1`;
-        params.push(status);
+        const params = [];
+        if (status && VALID_ORDER_STATUSES.includes(status)) {
+          queryText += ` WHERE o.order_status = $1`;
+          params.push(status);
+        }
+
+        queryText += ` GROUP BY o.id ORDER BY o.created_at DESC;`;
+
+        const result = await pool.query(queryText, params);
+        return res.json({ orders: result.rows });
+      } catch (dbErr) {
+        console.warn('Postgres fetch orders failed, falling back to memory:', dbErr.message);
       }
-
-      queryText += ` GROUP BY o.id ORDER BY o.created_at DESC;`;
-
-      const result = await pool.query(queryText, params);
-      return res.json({ orders: result.rows });
-    } else {
-      let filtered = [...inMemoryDB.orders];
-      if (status && VALID_ORDER_STATUSES.includes(status)) {
-        filtered = filtered.filter(o => o.order_status === status);
-      }
-      return res.json({ orders: filtered });
     }
+
+    let filtered = [...inMemoryDB.orders];
+    if (status && VALID_ORDER_STATUSES.includes(status)) {
+      filtered = filtered.filter(o => o.order_status === status);
+    }
+    return res.json({ orders: filtered });
   } catch (err) {
     console.error('Fetch orders error:', err);
     return res.status(500).json({ error: 'Failed to retrieve orders.' });
@@ -251,33 +256,36 @@ router.get('/:id', async (req, res) => {
     const orderId = req.params.id;
 
     if (isDbConnected()) {
-      const queryText = `
-        SELECT o.*, 
-               COALESCE(json_agg(
-                 json_build_object(
-                   'id', i.id,
-                   'item_name', i.item_name,
-                   'quantity', i.quantity,
-                   'unit_price', i.unit_price
-                 )
-               ) FILTER (WHERE i.id IS NOT NULL), '[]') AS items
-        FROM orders o
-        LEFT JOIN order_items i ON o.id = i.order_id
-        WHERE o.id = $1
-        GROUP BY o.id;
-      `;
-      const result = await pool.query(queryText, [orderId]);
-      if (result.rows.length === 0) {
-        return res.status(404).json({ error: 'Order not found.' });
+      try {
+        const queryText = `
+          SELECT o.*, 
+                 COALESCE(json_agg(
+                   json_build_object(
+                     'id', i.id,
+                     'item_name', i.item_name,
+                     'quantity', i.quantity,
+                     'unit_price', i.unit_price
+                   )
+                 ) FILTER (WHERE i.id IS NOT NULL), '[]') AS items
+          FROM orders o
+          LEFT JOIN order_items i ON o.id = i.order_id
+          WHERE o.id = $1
+          GROUP BY o.id;
+        `;
+        const result = await pool.query(queryText, [orderId]);
+        if (result.rows.length > 0) {
+          return res.json({ order: result.rows[0] });
+        }
+      } catch (dbErr) {
+        console.warn('Postgres fetch single order failed, falling back to memory:', dbErr.message);
       }
-      return res.json({ order: result.rows[0] });
-    } else {
-      const order = inMemoryDB.orders.find(o => o.id === orderId);
-      if (!order) {
-        return res.status(404).json({ error: 'Order not found.' });
-      }
-      return res.json({ order });
     }
+
+    const order = inMemoryDB.orders.find(o => o.id === orderId);
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found.' });
+    }
+    return res.json({ order });
   } catch (err) {
     console.error('Fetch single order error:', err);
     return res.status(500).json({ error: 'Failed to fetch order status.' });
@@ -298,30 +306,32 @@ router.patch('/:id/status', authenticateStaffToken, async (req, res) => {
       });
     }
 
-    // Auto-verify payment if status is delivered
     const shouldVerifyPayment = order_status === 'delivered';
 
     if (isDbConnected()) {
-      const updateQuery = shouldVerifyPayment
-        ? `UPDATE orders SET order_status = $1, payment_status = 'paid' WHERE id = $2 RETURNING *;`
-        : `UPDATE orders SET order_status = $1 WHERE id = $2 RETURNING *;`;
+      try {
+        const updateQuery = shouldVerifyPayment
+          ? `UPDATE orders SET order_status = $1, payment_status = 'paid' WHERE id = $2 RETURNING *;`
+          : `UPDATE orders SET order_status = $1 WHERE id = $2 RETURNING *;`;
 
-      const result = await pool.query(updateQuery, [order_status, orderId]);
-      if (result.rows.length === 0) {
-        return res.status(404).json({ error: 'Order not found.' });
+        const result = await pool.query(updateQuery, [order_status, orderId]);
+        if (result.rows.length > 0) {
+          return res.json({ message: 'Order status updated successfully', order: result.rows[0] });
+        }
+      } catch (dbErr) {
+        console.warn('Postgres status update failed, falling back to memory:', dbErr.message);
       }
-      return res.json({ message: 'Order status updated successfully', order: result.rows[0] });
-    } else {
-      const order = inMemoryDB.orders.find(o => o.id === orderId);
-      if (!order) {
-        return res.status(404).json({ error: 'Order not found.' });
-      }
-      order.order_status = order_status;
-      if (shouldVerifyPayment) {
-        order.payment_status = 'paid';
-      }
-      return res.json({ message: 'Order status updated successfully', order });
     }
+
+    const order = inMemoryDB.orders.find(o => o.id === orderId);
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found.' });
+    }
+    order.order_status = order_status;
+    if (shouldVerifyPayment) {
+      order.payment_status = 'paid';
+    }
+    return res.json({ message: 'Order status updated successfully', order });
   } catch (err) {
     console.error('Update order status error:', err);
     return res.status(500).json({ error: 'Failed to update order status.' });
@@ -329,29 +339,32 @@ router.patch('/:id/status', authenticateStaffToken, async (req, res) => {
 });
 
 // -------------------------------------------------------------
-// PATCH /api/orders/:id/verify-payment (Staff-Only Manual Payment Verification)
+// PATCH /api/orders/:id/verify-payment (Staff-Only Manual Verification)
 // -------------------------------------------------------------
 router.patch('/:id/verify-payment', authenticateStaffToken, async (req, res) => {
   try {
     const orderId = req.params.id;
 
     if (isDbConnected()) {
-      const result = await pool.query(
-        `UPDATE orders SET payment_status = 'paid' WHERE id = $1 RETURNING *;`,
-        [orderId]
-      );
-      if (result.rows.length === 0) {
-        return res.status(404).json({ error: 'Order not found.' });
+      try {
+        const result = await pool.query(
+          `UPDATE orders SET payment_status = 'paid' WHERE id = $1 RETURNING *;`,
+          [orderId]
+        );
+        if (result.rows.length > 0) {
+          return res.json({ message: 'Payment verified successfully', order: result.rows[0] });
+        }
+      } catch (dbErr) {
+        console.warn('Postgres verify payment failed, falling back to memory:', dbErr.message);
       }
-      return res.json({ message: 'Payment verified successfully', order: result.rows[0] });
-    } else {
-      const order = inMemoryDB.orders.find(o => o.id === orderId);
-      if (!order) {
-        return res.status(404).json({ error: 'Order not found.' });
-      }
-      order.payment_status = 'paid';
-      return res.json({ message: 'Payment verified successfully', order });
     }
+
+    const order = inMemoryDB.orders.find(o => o.id === orderId);
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found.' });
+    }
+    order.payment_status = 'paid';
+    return res.json({ message: 'Payment verified successfully', order });
   } catch (err) {
     console.error('Verify payment error:', err);
     return res.status(500).json({ error: 'Failed to verify payment.' });
@@ -359,7 +372,7 @@ router.patch('/:id/verify-payment', authenticateStaffToken, async (req, res) => 
 });
 
 // -------------------------------------------------------------
-// PATCH /api/orders/:id/modify (Public 3-Minute Customer Order Modification)
+// PATCH /api/orders/:id/modify (Public 3-Minute Order Modification)
 // -------------------------------------------------------------
 router.patch('/:id/modify', async (req, res) => {
   try {
@@ -369,24 +382,28 @@ router.patch('/:id/modify', async (req, res) => {
     let targetOrder = null;
 
     if (isDbConnected()) {
-      const orderRes = await pool.query('SELECT * FROM orders WHERE id = $1;', [orderId]);
-      if (orderRes.rows.length === 0) {
-        return res.status(404).json({ error: 'Order not found.' });
-      }
-      targetOrder = orderRes.rows[0];
-    } else {
-      targetOrder = inMemoryDB.orders.find(o => o.id === orderId);
-      if (!targetOrder) {
-        return res.status(404).json({ error: 'Order not found.' });
+      try {
+        const orderRes = await pool.query('SELECT * FROM orders WHERE id = $1;', [orderId]);
+        if (orderRes.rows.length > 0) {
+          targetOrder = orderRes.rows[0];
+        }
+      } catch (dbErr) {
+        console.warn('Postgres modify fetch failed, falling back to memory:', dbErr.message);
       }
     }
 
-    // Check status
+    if (!targetOrder) {
+      targetOrder = inMemoryDB.orders.find(o => o.id === orderId);
+    }
+
+    if (!targetOrder) {
+      return res.status(404).json({ error: 'Order not found.' });
+    }
+
     if (targetOrder.order_status !== 'pending') {
       return res.status(400).json({ error: 'Order cannot be edited once kitchen preparation has started.' });
     }
 
-    // Check 3-minute edit window (180,000 milliseconds)
     const createdAt = new Date(targetOrder.created_at).getTime();
     const now = Date.now();
     const elapsedSeconds = Math.floor((now - createdAt) / 1000);
@@ -395,7 +412,6 @@ router.patch('/:id/modify', async (req, res) => {
       return res.status(400).json({ error: 'Order edit window has expired (3 minutes limit reached).' });
     }
 
-    // Validation & Updates
     const updatedName = customer_name ? customer_name.trim() : targetOrder.customer_name;
     const cleanPhone = phone ? phone.toString().replace(/\D/g, '') : targetOrder.phone;
     if (cleanPhone.length !== 10) {
@@ -405,7 +421,6 @@ router.patch('/:id/modify', async (req, res) => {
     const updatedHostel = hostel && VALID_HOSTELS.includes(hostel) ? hostel : targetOrder.hostel;
     const updatedItemsList = Array.isArray(items) && items.length > 0 ? items : (targetOrder.items || []);
 
-    // Recalculate totals
     let subtotal = 0;
     let biryaniParcel = 0;
     let halfPortionCount = 0;
@@ -445,8 +460,9 @@ router.patch('/:id/modify', async (req, res) => {
     const total = subtotal + parcel_fee + delivery_fee;
 
     if (isDbConnected()) {
-      const client = await pool.connect();
+      let client = null;
       try {
+        client = await pool.connect();
         await client.query('BEGIN');
 
         const updateOrderQuery = `
@@ -460,39 +476,51 @@ router.patch('/:id/modify', async (req, res) => {
           updatedName, cleanPhone, updatedHostel, notes, subtotal, parcel_fee, delivery_fee, total, orderId
         ]);
 
-        // Delete old items and insert updated items
         await client.query('DELETE FROM order_items WHERE order_id = $1;', [orderId]);
+
+        const insertItemQuery = `
+          INSERT INTO order_items (order_id, item_name, quantity, unit_price)
+          VALUES ($1, $2, $3, $4);
+        `;
         for (const item of validatedItems) {
-          await client.query(
-            'INSERT INTO order_items (order_id, item_name, quantity, unit_price) VALUES ($1, $2, $3, $4);',
-            [orderId, item.item_name, item.quantity, item.unit_price]
-          );
+          await client.query(insertItemQuery, [orderId, item.item_name, item.quantity, item.unit_price]);
         }
 
         await client.query('COMMIT');
+
         const finalOrder = updatedRes.rows[0];
         finalOrder.items = validatedItems;
 
-        return res.json({ message: 'Order modified successfully!', order: finalOrder });
-      } catch (err) {
-        await client.query('ROLLBACK');
-        throw err;
+        return res.json({
+          message: 'Order modified successfully',
+          order: finalOrder
+        });
+      } catch (dbErr) {
+        if (client) {
+          try { await client.query('ROLLBACK'); } catch (_) {}
+        }
+        console.warn('Postgres modify failed, falling back to memory:', dbErr.message);
       } finally {
-        client.release();
+        if (client) {
+          client.release();
+        }
       }
-    } else {
-      targetOrder.customer_name = updatedName;
-      targetOrder.phone = cleanPhone;
-      targetOrder.hostel = updatedHostel;
-      if (notes) targetOrder.notes = notes;
-      targetOrder.subtotal = subtotal;
-      targetOrder.parcel_fee = parcel_fee;
-      targetOrder.delivery_fee = delivery_fee;
-      targetOrder.total = total;
-      targetOrder.items = validatedItems;
-
-      return res.json({ message: 'Order modified successfully!', order: targetOrder });
     }
+
+    targetOrder.customer_name = updatedName;
+    targetOrder.phone = cleanPhone;
+    targetOrder.hostel = updatedHostel;
+    targetOrder.notes = notes || targetOrder.notes;
+    targetOrder.items = validatedItems;
+    targetOrder.subtotal = subtotal;
+    targetOrder.parcel_fee = parcel_fee;
+    targetOrder.delivery_fee = delivery_fee;
+    targetOrder.total = total;
+
+    return res.json({
+      message: 'Order modified successfully',
+      order: targetOrder
+    });
   } catch (err) {
     console.error('Modify order error:', err);
     return res.status(500).json({ error: 'Failed to modify order.' });
@@ -500,7 +528,7 @@ router.patch('/:id/modify', async (req, res) => {
 });
 
 // -------------------------------------------------------------
-// PATCH /api/orders/:id/cancel (Public 3-Minute Customer Order Cancellation)
+// PATCH /api/orders/:id/cancel (Public 3-Minute Customer Order Cancel)
 // -------------------------------------------------------------
 router.patch('/:id/cancel', async (req, res) => {
   try {
@@ -508,38 +536,58 @@ router.patch('/:id/cancel', async (req, res) => {
     let targetOrder = null;
 
     if (isDbConnected()) {
-      const orderRes = await pool.query('SELECT * FROM orders WHERE id = $1;', [orderId]);
-      if (orderRes.rows.length === 0) {
-        return res.status(404).json({ error: 'Order not found.' });
+      try {
+        const orderRes = await pool.query('SELECT * FROM orders WHERE id = $1;', [orderId]);
+        if (orderRes.rows.length > 0) {
+          targetOrder = orderRes.rows[0];
+        }
+      } catch (dbErr) {
+        console.warn('Postgres cancel fetch failed, falling back to memory:', dbErr.message);
       }
-      targetOrder = orderRes.rows[0];
-    } else {
+    }
+
+    if (!targetOrder) {
       targetOrder = inMemoryDB.orders.find(o => o.id === orderId);
-      if (!targetOrder) {
-        return res.status(404).json({ error: 'Order not found.' });
-      }
+    }
+
+    if (!targetOrder) {
+      return res.status(404).json({ error: 'Order not found.' });
     }
 
     if (targetOrder.order_status !== 'pending') {
-      return res.status(400).json({ error: 'Order cannot be cancelled once cooking or delivery has started.' });
+      return res.status(400).json({ error: 'Order cannot be cancelled once kitchen preparation has started.' });
     }
 
     const createdAt = new Date(targetOrder.created_at).getTime();
-    const elapsedSeconds = Math.floor((Date.now() - createdAt) / 1000);
+    const now = Date.now();
+    const elapsedSeconds = Math.floor((now - createdAt) / 1000);
+
     if (elapsedSeconds > 180) {
       return res.status(400).json({ error: 'Order cancellation window has expired (3 minutes limit reached).' });
     }
 
     if (isDbConnected()) {
-      const updateRes = await pool.query(
-        `UPDATE orders SET order_status = 'cancelled' WHERE id = $1 RETURNING *;`,
-        [orderId]
-      );
-      return res.json({ success: true, message: 'Order cancelled successfully.', order: updateRes.rows[0] });
-    } else {
-      targetOrder.order_status = 'cancelled';
-      return res.json({ success: true, message: 'Order cancelled successfully.', order: targetOrder });
+      try {
+        const result = await pool.query(
+          `UPDATE orders SET order_status = 'cancelled' WHERE id = $1 RETURNING *;`,
+          [orderId]
+        );
+        if (result.rows.length > 0) {
+          return res.json({
+            message: 'Order cancelled successfully',
+            order: result.rows[0]
+          });
+        }
+      } catch (dbErr) {
+        console.warn('Postgres cancel update failed, falling back to memory:', dbErr.message);
+      }
     }
+
+    targetOrder.order_status = 'cancelled';
+    return res.json({
+      message: 'Order cancelled successfully',
+      order: targetOrder
+    });
   } catch (err) {
     console.error('Cancel order error:', err);
     return res.status(500).json({ error: 'Failed to cancel order.' });
