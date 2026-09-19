@@ -1,8 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { API_BASE_URL } from '../config/api';
 
 const AuthContext = createContext();
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(() => localStorage.getItem('idly_staff_token') || null);

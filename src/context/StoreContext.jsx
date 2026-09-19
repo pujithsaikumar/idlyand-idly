@@ -1,9 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { MENU_CATEGORIES } from '../data/menuData';
+import { API_BASE_URL } from '../config/api';
 
 const StoreContext = createContext();
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 const STORAGE_KEY_SETTINGS = 'idly_store_settings_v1';
 const STORAGE_KEY_PRICES = 'idly_custom_prices_v1';
 const STORAGE_KEY_OUT_OF_STOCK = 'idly_out_of_stock_v1';

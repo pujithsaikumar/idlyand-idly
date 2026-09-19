@@ -3,8 +3,8 @@ import { X, CreditCard, Banknote, ShieldCheck, AlertCircle, Loader2, QrCode, Cop
 import { HOSTEL_LIST } from '../data/menuData';
 import { useCart } from '../context/CartContext';
 import { useStore } from '../context/StoreContext';
+import { API_BASE_URL } from '../config/api';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 const HOTEL_UPI_ID = 'idlyandidly@ybl'; // Hotel UPI VPA ID
 
 export default function OrderCheckoutModal({ isOpen, onClose, onOrderPlaced }) {

@@ -2,8 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { X, CheckCircle2, Clock, Bike, Home, RefreshCw, AlertCircle, Edit3, Plus, Minus, Trash2, Save, User, Phone, MapPin, XCircle, ChevronDown, ChevronUp, ShoppingBag } from 'lucide-react';
 import { HOSTEL_LIST, MENU_CATEGORIES } from '../data/menuData';
 import { useStore } from '../context/StoreContext';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+import { API_BASE_URL } from '../config/api';
 
 const STATUS_STEPS = [
   { id: 'pending', title: 'Order Received', desc: 'Sent to Idly & Idly kitchen', icon: Clock },

@@ -9,8 +9,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { useStore } from '../../context/StoreContext';
 import { MENU_CATEGORIES, HOSTEL_LIST } from '../../data/menuData';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+import { API_BASE_URL } from '../../config/api';
 
 export default function RestaurantDashboard() {
   const { token, staffUser, logoutStaff } = useAuth();
