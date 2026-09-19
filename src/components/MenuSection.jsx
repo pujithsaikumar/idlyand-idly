@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
 import { Plus, Minus, Star, AlertCircle } from 'lucide-react';
-import { MENU_CATEGORIES } from '../data/menuData';
 import { useCart } from '../context/CartContext';
 import { useStore } from '../context/StoreContext';
 
 export default function MenuSection() {
   const { cartItems, addToCart, updateQuantity } = useCart();
-  const { getItemPrice, isItemOutOfStock, isStoreOpen } = useStore();
-  const [activeCategory, setActiveCategory] = useState(MENU_CATEGORIES[0].id);
+  const { getItemPrice, isItemOutOfStock, isStoreOpen, menuCategories } = useStore();
+  const [activeCategory, setActiveCategory] = useState(menuCategories[0]?.id || 'tiffins');
 
   const getItemQuantity = (id) => {
     const item = cartItems.find(i => i.id === id);
@@ -112,7 +111,7 @@ export default function MenuSection() {
           gap: '4px',
           margin: '0 auto'
         }}>
-          {MENU_CATEGORIES.map(category => {
+          {menuCategories.map(category => {
             const isActive = activeCategory === category.id;
             return (
               <a
@@ -155,7 +154,7 @@ export default function MenuSection() {
 
       {/* Categories Content */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '40px' }}>
-        {MENU_CATEGORIES.map(category => (
+        {menuCategories.map(category => (
           <div key={category.id} id={`cat-${category.id}`}>
             {/* Category Subheader */}
             <div style={{

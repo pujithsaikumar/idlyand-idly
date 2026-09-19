@@ -3,7 +3,7 @@ import {
   LogOut, RefreshCw, CheckCircle2, Clock, Bike, Phone, MapPin, AlertCircle,
   Flame, ShieldCheck, QrCode, TrendingUp, DollarSign, ShoppingBag, BarChart2,
   Settings, Power, ToggleLeft, ToggleRight, Edit2, Check, Download, Printer,
-  Store, AlertTriangle, ChevronRight, PieChart
+  Store, AlertTriangle, ChevronRight, PieChart, Plus, Trash2, X, PlusCircle, Sparkles
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useStore } from '../../context/StoreContext';
@@ -18,7 +18,8 @@ export default function RestaurantDashboard() {
     deliveryTimeEstimate, setDeliveryTimeEstimate,
     announcementText, setAnnouncementText,
     getItemPrice, updateItemPrice,
-    isItemOutOfStock, toggleItemStock
+    isItemOutOfStock, toggleItemStock,
+    customMenuItems, addMenuItem, deleteMenuItem, menuCategories
   } = useStore();
 
   const [activeMainTab, setActiveMainTab] = useState('orders'); // 'orders' | 'analytics' | 'settings'
@@ -33,6 +34,53 @@ export default function RestaurantDashboard() {
   const [editingPriceItemId, setEditingPriceItemId] = useState(null);
   const [tempPriceInput, setTempPriceInput] = useState('');
   const [customAnnouncementInput, setCustomAnnouncementInput] = useState(announcementText);
+
+  // Add Item Modal state (Admin)
+  const [showAddItemModal, setShowAddItemModal] = useState(false);
+  const [newItemName, setNewItemName] = useState('');
+  const [newItemPrice, setNewItemPrice] = useState('');
+  const [newItemCategory, setNewItemCategory] = useState('tiffins');
+  const [newItemPortion, setNewItemPortion] = useState('1 plate');
+  const [newItemDesc, setNewItemDesc] = useState('');
+  const [newItemEmoji, setNewItemEmoji] = useState('🥞');
+  const [newItemBadge, setNewItemBadge] = useState('');
+  const [isAddingItem, setIsAddingItem] = useState(false);
+
+  const handleCreateItem = async (e) => {
+    e.preventDefault();
+    if (!newItemName.trim() || !newItemPrice) {
+      alert('Please enter both item name and price.');
+      return;
+    }
+    setIsAddingItem(true);
+    try {
+      await addMenuItem({
+        name: newItemName.trim(),
+        price: parseFloat(newItemPrice) || 0,
+        category: newItemCategory,
+        portion: newItemPortion.trim() || '1 portion',
+        desc: newItemDesc.trim(),
+        emoji: newItemEmoji || '🥞',
+        badge: newItemBadge.trim()
+      });
+      setNewItemName('');
+      setNewItemPrice('');
+      setNewItemDesc('');
+      setNewItemBadge('');
+      setShowAddItemModal(false);
+      alert(`Item "${newItemName}" added successfully and is now live for all students!`);
+    } catch (err) {
+      alert('Failed to add item: ' + err.message);
+    } finally {
+      setIsAddingItem(false);
+    }
+  };
+
+  const handleDeleteItem = async (itemId, itemName) => {
+    if (window.confirm(`Are you sure you want to delete "${itemName}" from the live menu?`)) {
+      await deleteMenuItem(itemId);
+    }
+  };
 
   const handleRefreshClick = async () => {
     setRefreshing(true);
@@ -1140,20 +1188,214 @@ export default function RestaurantDashboard() {
             border: '1px solid var(--border-color)',
             boxShadow: 'var(--shadow-soft)'
           }}>
-            <div style={{ marginBottom: '16px' }}>
-              <h4 style={{ fontSize: '1.2rem', fontWeight: 800 }}>
-                Live Menu Prices &amp; Availability Manager
-              </h4>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                Edit item prices or toggle items In-Stock / Sold-Out. Changes appear immediately on the customer menu.
-              </p>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '12px',
+              marginBottom: '16px'
+            }}>
+              <div>
+                <h4 style={{ fontSize: '1.2rem', fontWeight: 800 }}>
+                  Live Menu Prices &amp; Availability Manager
+                </h4>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  Add new items, edit prices, or toggle items In-Stock / Sold-Out. Changes appear immediately on the customer menu.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowAddItemModal(true)}
+                style={{
+                  backgroundColor: 'var(--primary)',
+                  color: '#FFFFFF',
+                  padding: '9px 16px',
+                  borderRadius: '12px',
+                  fontWeight: 700,
+                  fontSize: '0.85rem',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: '0 3px 10px rgba(230, 74, 25, 0.3)',
+                  cursor: 'pointer'
+                }}
+              >
+                <Plus size={16} /> Add New Menu Item
+              </button>
             </div>
 
+            {/* Modal / Card to Add New Menu Item */}
+            {showAddItemModal && (
+              <div style={{
+                backgroundColor: '#FFF8F0',
+                border: '2px dashed var(--primary)',
+                borderRadius: '16px',
+                padding: '20px',
+                marginBottom: '24px',
+                position: 'relative'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                  <h5 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <PlusCircle size={18} /> Create New Menu Item
+                  </h5>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddItemModal(false)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                <form onSubmit={handleCreateItem}>
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                    gap: '12px',
+                    marginBottom: '12px'
+                  }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, marginBottom: '4px' }}>Item Name *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Ghee Podi Idly"
+                        value={newItemName}
+                        onChange={e => setNewItemName(e.target.value)}
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', fontSize: '0.85rem' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, marginBottom: '4px' }}>Price (₹) *</label>
+                      <input
+                        type="number"
+                        required
+                        min="1"
+                        placeholder="e.g. 50"
+                        value={newItemPrice}
+                        onChange={e => setNewItemPrice(e.target.value)}
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', fontSize: '0.85rem' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, marginBottom: '4px' }}>Category *</label>
+                      <select
+                        value={newItemCategory}
+                        onChange={e => setNewItemCategory(e.target.value)}
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', fontSize: '0.85rem' }}
+                      >
+                        <option value="tiffins">🥞 Hot Tiffins &amp; Fritters</option>
+                        <option value="dosas">🥘 Signature Crispy Dosas</option>
+                        <option value="biryani">🍛 Weekend Biryani &amp; Specials</option>
+                        <option value="beverages">🥤 Beverages &amp; Extra Chutneys</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, marginBottom: '4px' }}>Portion / Serving</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 4 pcs, 1 plate"
+                        value={newItemPortion}
+                        onChange={e => setNewItemPortion(e.target.value)}
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', fontSize: '0.85rem' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, marginBottom: '4px' }}>Emoji Icon</label>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        {['🥞', '🥘', '🍛', '🥟', '🍩', '🌶️', '🥤', '☕'].map(em => (
+                          <button
+                            key={em}
+                            type="button"
+                            onClick={() => setNewItemEmoji(em)}
+                            style={{
+                              padding: '6px',
+                              borderRadius: '6px',
+                              backgroundColor: newItemEmoji === em ? 'var(--primary)' : '#FFFFFF',
+                              border: '1px solid var(--border-color)',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            {em}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, marginBottom: '4px' }}>Badge (Optional)</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Chef Choice, New 🔥"
+                        value={newItemBadge}
+                        onChange={e => setNewItemBadge(e.target.value)}
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', fontSize: '0.85rem' }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ marginBottom: '14px' }}>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, marginBottom: '4px' }}>Description / Highlights</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Tossed in house ground spicy podi and generous dollop of pure cow ghee."
+                      value={newItemDesc}
+                      onChange={e => setNewItemDesc(e.target.value)}
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', fontSize: '0.85rem' }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                    <button
+                      type="button"
+                      onClick={() => setShowAddItemModal(false)}
+                      style={{
+                        padding: '8px 16px',
+                        borderRadius: '8px',
+                        backgroundColor: '#FFFFFF',
+                        border: '1px solid var(--border-color)',
+                        fontWeight: 600,
+                        fontSize: '0.85rem',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isAddingItem}
+                      style={{
+                        padding: '8px 20px',
+                        borderRadius: '8px',
+                        backgroundColor: '#2E7D32',
+                        color: '#FFFFFF',
+                        border: 'none',
+                        fontWeight: 700,
+                        fontSize: '0.85rem',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <Check size={16} /> {isAddingItem ? 'Adding...' : 'Publish to Live Menu'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              {MENU_CATEGORIES.map(category => (
+              {menuCategories.map(category => (
                 <div key={category.id}>
                   <h5 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--primary)', marginBottom: '8px', borderBottom: '1px solid var(--border-color)', paddingBottom: '4px' }}>
-                    {category.icon} {category.title}
+                    {category.icon} {category.title} ({category.items.length})
                   </h5>
 
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '10px' }}>
@@ -1161,6 +1403,7 @@ export default function RestaurantDashboard() {
                       const currentPrice = getItemPrice(item);
                       const isOutOfStock = isItemOutOfStock(item.id);
                       const isEditing = editingPriceItemId === item.id;
+                      const isCustom = String(item.id).startsWith('custom_');
 
                       return (
                         <div
@@ -1170,22 +1413,30 @@ export default function RestaurantDashboard() {
                             alignItems: 'center',
                             justifyContent: 'space-between',
                             backgroundColor: isOutOfStock ? '#FAFAFA' : '#FAF7F2',
-                            border: `1px solid ${isOutOfStock ? '#EEEEEE' : '#EDE4DC'}`,
+                            border: `1px solid ${isCustom ? '#FFE0B2' : (isOutOfStock ? '#EEEEEE' : '#EDE4DC')}`,
                             padding: '10px 14px',
                             borderRadius: '12px',
-                            opacity: isOutOfStock ? 0.65 : 1
+                            opacity: isOutOfStock ? 0.65 : 1,
+                            position: 'relative'
                           }}
                         >
-                          <div style={{ minWidth: 0, flex: 1 }}>
-                            <p style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                              {item.emoji} {item.name}
-                            </p>
+                          <div style={{ minWidth: 0, flex: 1, marginRight: '8px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                              <p style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {item.emoji} {item.name}
+                              </p>
+                              {isCustom && (
+                                <span style={{ fontSize: '0.65rem', backgroundColor: '#FFF3E0', color: '#E65100', padding: '1px 5px', borderRadius: '4px', fontWeight: 800 }}>
+                                  ✨ Added
+                                </span>
+                              )}
+                            </div>
                             <span style={{ fontSize: '0.725rem', color: isOutOfStock ? '#C62828' : '#2E7D32', fontWeight: 700 }}>
                               {isOutOfStock ? '🔴 SOLD OUT' : '🟢 IN STOCK'}
                             </span>
                           </div>
 
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
                             {isEditing ? (
                               <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                                 <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>₹</span>
@@ -1244,8 +1495,27 @@ export default function RestaurantDashboard() {
                                 border: `1px solid ${isOutOfStock ? '#C8E6C9' : '#FFCDD2'}`
                               }}
                             >
-                              {isOutOfStock ? 'Make In-Stock' : 'Mark Sold-Out'}
+                              {isOutOfStock ? 'In-Stock' : 'Sold-Out'}
                             </button>
+
+                            {/* Delete custom item button */}
+                            {isCustom && (
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteItem(item.id, item.name)}
+                                title="Delete Item"
+                                style={{
+                                  padding: '4px 6px',
+                                  borderRadius: '6px',
+                                  backgroundColor: '#FFEBEE',
+                                  border: '1px solid #FFCDD2',
+                                  color: '#C62828',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            )}
                           </div>
                         </div>
                       );
