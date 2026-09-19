@@ -36,6 +36,22 @@ app.use(express.json());
 
 import pool, { isDbConnected } from './db.js';
 
+// Root API Welcome Route
+app.get('/', (req, res) => {
+  res.json({
+    service: 'Idly & Idly Backend API',
+    status: 'Online & Operational',
+    database: isDbConnected() ? 'Connected to Supabase PostgreSQL' : 'Fallback Mode',
+    frontend: 'https://idlyand-idly-rudras-projects-9467793d.vercel.app',
+    endpoints: {
+      health: '/api/health',
+      db_status: '/api/db-status',
+      store: '/api/store',
+      orders: '/api/orders'
+    }
+  });
+});
+
 // Health Check
 app.get('/api/health', (req, res) => {
   res.json({
