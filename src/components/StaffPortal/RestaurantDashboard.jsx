@@ -675,102 +675,152 @@ export default function RestaurantDashboard() {
                       </div>
                     )}
 
-                    {/* Status Advance Buttons */}
-                    {order.order_status !== 'delivered' && order.order_status !== 'cancelled' && (
+                    {/* Status Action Buttons Bar */}
+                    <div style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '8px',
+                      paddingTop: '12px',
+                      borderTop: '1px dashed var(--border-color)'
+                    }}>
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        flexWrap: 'wrap',
+                        gap: '6px'
+                      }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>
+                          Status Control:
+                        </span>
+                        {updatingId === order.id && (
+                          <span style={{ fontSize: '0.75rem', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <RefreshCw size={12} className="animate-spin" /> Updating status...
+                          </span>
+                        )}
+                      </div>
+
                       <div style={{
                         display: 'flex',
                         flexWrap: 'wrap',
                         alignItems: 'center',
-                        gap: '8px',
-                        paddingTop: '10px',
-                        borderTop: '1px dashed var(--border-color)'
+                        gap: '8px'
                       }}>
-                        {order.order_status === 'pending' && (
-                          <button
-                            type="button"
-                            disabled={updatingId === order.id}
-                            onClick={() => handleUpdateStatus(order.id, 'preparing')}
-                            style={{
-                              backgroundColor: '#E65100',
-                              color: '#FFFFFF',
-                              padding: '7px 14px',
-                              borderRadius: 'var(--radius-pill)',
-                              fontSize: '0.8rem',
-                              fontWeight: 700,
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '5px'
-                            }}
-                          >
-                            <Flame size={14} /> Accept &amp; Start Preparing
-                          </button>
-                        )}
+                        {/* 1. Accept / Preparing Button */}
+                        <button
+                          type="button"
+                          disabled={updatingId === order.id}
+                          onClick={() => handleUpdateStatus(order.id, 'preparing')}
+                          style={{
+                            backgroundColor: order.order_status === 'preparing' ? '#E65100' : '#FFF3E0',
+                            color: order.order_status === 'preparing' ? '#FFFFFF' : '#E65100',
+                            border: order.order_status === 'preparing' ? '1px solid #E65100' : '1px solid #FFE0B2',
+                            padding: '7px 14px',
+                            borderRadius: 'var(--radius-pill)',
+                            fontSize: '0.8rem',
+                            fontWeight: 700,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            cursor: 'pointer',
+                            boxShadow: order.order_status === 'preparing' ? '0 2px 6px rgba(230, 81, 0, 0.3)' : 'none',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <Flame size={14} />
+                          {order.order_status === 'preparing' ? '🍳 Preparing' : 'Accept & Prepare'}
+                        </button>
 
-                        {order.order_status === 'preparing' && (
-                          <button
-                            type="button"
-                            disabled={updatingId === order.id}
-                            onClick={() => handleUpdateStatus(order.id, 'en_route')}
-                            style={{
-                              backgroundColor: '#7B1FA2',
-                              color: '#FFFFFF',
-                              padding: '7px 14px',
-                              borderRadius: 'var(--radius-pill)',
-                              fontSize: '0.8rem',
-                              fontWeight: 700,
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '5px'
-                            }}
-                          >
-                            <Bike size={14} /> Dispatch Rider (Out for Delivery)
-                          </button>
-                        )}
+                        {/* 2. On the Way / Out for Delivery Button */}
+                        <button
+                          type="button"
+                          disabled={updatingId === order.id}
+                          onClick={() => handleUpdateStatus(order.id, 'en_route')}
+                          style={{
+                            backgroundColor: order.order_status === 'en_route' ? '#7B1FA2' : '#F3E5F5',
+                            color: order.order_status === 'en_route' ? '#FFFFFF' : '#7B1FA2',
+                            border: order.order_status === 'en_route' ? '1px solid #7B1FA2' : '1px solid #E1BEE7',
+                            padding: '7px 14px',
+                            borderRadius: 'var(--radius-pill)',
+                            fontSize: '0.8rem',
+                            fontWeight: 700,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            cursor: 'pointer',
+                            boxShadow: order.order_status === 'en_route' ? '0 2px 6px rgba(123, 31, 162, 0.3)' : 'none',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <Bike size={14} />
+                          {order.order_status === 'en_route' ? '🛵 On the Way' : 'Dispatch / On the Way'}
+                        </button>
 
-                        {order.order_status === 'en_route' && (
-                          <button
-                            type="button"
-                            disabled={updatingId === order.id}
-                            onClick={() => handleUpdateStatus(order.id, 'delivered')}
-                            style={{
-                              backgroundColor: '#2E7D32',
-                              color: '#FFFFFF',
-                              padding: '7px 14px',
-                              borderRadius: 'var(--radius-pill)',
-                              fontSize: '0.8rem',
-                              fontWeight: 700,
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '5px'
-                            }}
-                          >
-                            <CheckCircle2 size={14} /> Mark Delivered &amp; Verify Payment
-                          </button>
-                        )}
+                        {/* 3. Delivered Button */}
+                        <button
+                          type="button"
+                          disabled={updatingId === order.id}
+                          onClick={() => handleUpdateStatus(order.id, 'delivered')}
+                          style={{
+                            backgroundColor: order.order_status === 'delivered' ? '#2E7D32' : '#E8F5E9',
+                            color: order.order_status === 'delivered' ? '#FFFFFF' : '#2E7D32',
+                            border: order.order_status === 'delivered' ? '1px solid #2E7D32' : '1px solid #C8E6C9',
+                            padding: '7px 14px',
+                            borderRadius: 'var(--radius-pill)',
+                            fontSize: '0.8rem',
+                            fontWeight: 700,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            cursor: 'pointer',
+                            boxShadow: order.order_status === 'delivered' ? '0 2px 6px rgba(46, 125, 50, 0.3)' : 'none',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <CheckCircle2 size={14} />
+                          {order.order_status === 'delivered' ? '✓ Delivered' : 'Mark Delivered'}
+                        </button>
 
-                        {!isPaid && (
+                        {/* 4. Payment Verification Button / Badge */}
+                        {!isPaid ? (
                           <button
                             type="button"
                             disabled={updatingId === order.id}
                             onClick={() => handleVerifyPayment(order.id)}
                             style={{
-                              backgroundColor: '#FFF3E0',
-                              color: '#E65100',
-                              border: '1px solid #FFE0B2',
+                              backgroundColor: '#FFF8E1',
+                              color: '#F57C00',
+                              border: '1px solid #FFE082',
                               padding: '7px 12px',
                               borderRadius: 'var(--radius-pill)',
                               fontSize: '0.8rem',
                               fontWeight: 700,
                               display: 'inline-flex',
                               alignItems: 'center',
-                              gap: '4px'
+                              gap: '4px',
+                              cursor: 'pointer'
                             }}
                           >
                             <ShieldCheck size={14} /> Verify Payment
                           </button>
+                        ) : (
+                          <span style={{
+                            backgroundColor: '#E8F5E9',
+                            color: '#2E7D32',
+                            border: '1px solid #C8E6C9',
+                            padding: '7px 12px',
+                            borderRadius: 'var(--radius-pill)',
+                            fontSize: '0.8rem',
+                            fontWeight: 700,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}>
+                            <Check size={14} /> Payment Verified
+                          </span>
                         )}
                       </div>
-                    )}
+                    </div>
                   </div>
                 );
               })}

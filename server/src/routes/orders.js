@@ -18,8 +18,9 @@ const VALID_HOSTELS = [
 const VALID_ORDER_STATUSES = ['pending', 'preparing', 'en_route', 'delivered', 'cancelled'];
 
 function generateOrderId() {
-  const randomNum = Math.floor(1000 + Math.random() * 9000);
-  return `IDLY-${randomNum}`;
+  const timePart = Date.now().toString().slice(-5);
+  const randPart = Math.floor(100 + Math.random() * 900).toString();
+  return `IDLY-${timePart}${randPart}`;
 }
 
 // -------------------------------------------------------------
