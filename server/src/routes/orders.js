@@ -17,10 +17,29 @@ const VALID_HOSTELS = [
 
 const VALID_ORDER_STATUSES = ['pending', 'preparing', 'en_route', 'delivered', 'cancelled'];
 
-function generateOrderId() {
-  const timePart = Date.now().toString().slice(-5);
-  const randPart = Math.floor(100 + Math.random() * 900).toString();
-  return `IDLY-${timePart}${randPart}`;
+async function generateOrderId() {
+  for (let attempt = 0; attempt < 50; attempt++) {
+    const random4 = Math.floor(1000 + Math.random() * 9000);
+    const candidateId = `IDLY-${random4}`;
+
+    if (isDbConnected()) {
+      try {
+        const check = await pool.query('SELECT 1 FROM orders WHERE id = $1 LIMIT 1;', [candidateId]);
+        if (check.rows.length === 0) {
+          return candidateId;
+        }
+      } catch (err) {
+        // Fall back to memory check if DB query fails
+      }
+    }
+
+    const inMemoryExists = inMemoryDB.orders.some(o => o.id === candidateId);
+    if (!inMemoryExists) {
+      return candidateId;
+    }
+  }
+
+  return `IDLY-${Math.floor(1000 + Math.random() * 9000)}`;
 }
 
 // -------------------------------------------------------------
@@ -110,7 +129,7 @@ router.post('/', async (req, res) => {
     }
 
     const total = subtotal + parcel_fee + delivery_fee;
-    const orderId = generateOrderId();
+    const orderId = await generateOrderId();
     const orderStatus = 'pending';
 
     // 3. Attempt PostgreSQL Database Save
