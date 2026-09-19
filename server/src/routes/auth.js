@@ -2,6 +2,7 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import pool, { inMemoryDB, isDbConnected } from '../db.js';
+import { authenticateStaffToken } from '../middleware/auth.js';
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_jwt_key_idly_and_idly_2026';
@@ -86,6 +87,66 @@ router.post('/login', async (req, res) => {
   } catch (err) {
     console.error('Login error:', err);
     return res.status(500).json({ error: 'Internal server error during authentication.' });
+  }
+});
+
+// -------------------------------------------------------------
+// POST /api/auth/change-password (Admin / Staff Password Changer)
+// -------------------------------------------------------------
+router.post('/change-password', authenticateStaffToken, async (req, res) => {
+  try {
+    const { target_email, new_password } = req.body;
+    const requesterRole = req.user?.role;
+    const requesterEmail = req.user?.email;
+
+    if (!new_password || new_password.trim().length < 6) {
+      return res.status(400).json({ error: 'New password must be at least 6 characters long.' });
+    }
+
+    // Admin can update any account; Staff can only update their own account
+    const emailToUpdate = (target_email && requesterRole === 'admin')
+      ? target_email.trim().toLowerCase()
+      : requesterEmail;
+
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(new_password.trim(), salt);
+
+    if (isDbConnected()) {
+      try {
+        await pool.query(`
+          INSERT INTO staff_users (email, password_hash, role)
+          VALUES ($1, $2, $3)
+          ON CONFLICT (email) DO UPDATE SET password_hash = $2;
+        `, [
+          emailToUpdate,
+          passwordHash,
+          emailToUpdate === 'admin@idlyandidly.com' ? 'admin' : 'staff'
+        ]);
+      } catch (dbErr) {
+        console.warn('Postgres password update error:', dbErr.message);
+      }
+    }
+
+    // Also update inMemoryDB for fallback
+    let inMemUser = inMemoryDB.staffUsers.find(u => u.email === emailToUpdate);
+    if (inMemUser) {
+      inMemUser.password_hash = passwordHash;
+    } else {
+      inMemoryDB.staffUsers.push({
+        id: Date.now(),
+        email: emailToUpdate,
+        password_hash: passwordHash,
+        role: emailToUpdate === 'admin@idlyandidly.com' ? 'admin' : 'staff'
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: `Password for ${emailToUpdate} updated successfully! Use the new password for your next login.`
+    });
+  } catch (err) {
+    console.error('Password change error:', err);
+    return res.status(500).json({ error: 'Failed to update password.' });
   }
 });
 

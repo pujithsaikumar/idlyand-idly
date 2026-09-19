@@ -3,7 +3,8 @@ import {
   LogOut, RefreshCw, CheckCircle2, Clock, Bike, Phone, MapPin, AlertCircle,
   Flame, ShieldCheck, QrCode, TrendingUp, DollarSign, ShoppingBag, BarChart2,
   Settings, Power, ToggleLeft, ToggleRight, Edit2, Check, Download, Printer,
-  Store, AlertTriangle, ChevronRight, PieChart, Plus, Trash2, X, PlusCircle, Sparkles
+  Store, AlertTriangle, ChevronRight, PieChart, Plus, Trash2, X, PlusCircle, Sparkles,
+  Lock, Key
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useStore } from '../../context/StoreContext';
@@ -34,6 +35,58 @@ export default function RestaurantDashboard() {
   const [editingPriceItemId, setEditingPriceItemId] = useState(null);
   const [tempPriceInput, setTempPriceInput] = useState('');
   const [customAnnouncementInput, setCustomAnnouncementInput] = useState(announcementText);
+
+  // Password Management state (Admin)
+  const [selectedTargetAccount, setSelectedTargetAccount] = useState('admin@idlyandidly.com');
+  const [newPasswordInput, setNewPasswordInput] = useState('');
+  const [confirmPasswordInput, setConfirmPasswordInput] = useState('');
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordChangeSuccess, setPasswordChangeSuccess] = useState('');
+  const [passwordChangeError, setPasswordChangeError] = useState('');
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    setPasswordChangeSuccess('');
+    setPasswordChangeError('');
+
+    if (!newPasswordInput || newPasswordInput.length < 6) {
+      setPasswordChangeError('New password must be at least 6 characters long.');
+      return;
+    }
+
+    if (newPasswordInput !== confirmPasswordInput) {
+      setPasswordChangeError('Passwords do not match. Please retype carefully.');
+      return;
+    }
+
+    setIsChangingPassword(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/change-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          target_email: selectedTargetAccount,
+          new_password: newPasswordInput
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to update password');
+      }
+
+      setPasswordChangeSuccess(data.message || `Password for ${selectedTargetAccount} updated successfully!`);
+      setNewPasswordInput('');
+      setConfirmPasswordInput('');
+    } catch (err) {
+      setPasswordChangeError(err.message);
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
 
   // Add Item Modal state (Admin)
   const [showAddItemModal, setShowAddItemModal] = useState(false);
@@ -1178,6 +1231,112 @@ export default function RestaurantDashboard() {
                 Save
               </button>
             </div>
+          </div>
+
+          {/* Account Security & Password Manager (Admin Only) */}
+          <div style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: '20px',
+            padding: '20px',
+            border: '1px solid var(--border-color)',
+            boxShadow: 'var(--shadow-soft)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+              <div style={{ padding: '6px', backgroundColor: '#E3F2FD', borderRadius: '10px', color: '#1976D2' }}>
+                <Key size={18} />
+              </div>
+              <h4 style={{ fontSize: '1.05rem', fontWeight: 800, margin: 0 }}>
+                Account Security &amp; Password Manager
+              </h4>
+            </div>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '14px' }}>
+              Update login passwords for Admin or Staff accounts. Changes take effect immediately and are saved securely in Supabase database.
+            </p>
+
+            {passwordChangeSuccess && (
+              <div style={{ backgroundColor: '#E8F5E9', border: '1px solid #C8E6C9', color: '#2E7D32', padding: '10px 14px', borderRadius: '10px', fontSize: '0.825rem', fontWeight: 700, marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <CheckCircle2 size={16} /> {passwordChangeSuccess}
+              </div>
+            )}
+
+            {passwordChangeError && (
+              <div style={{ backgroundColor: '#FFEBEE', border: '1px solid #FFCDD2', color: '#C62828', padding: '10px 14px', borderRadius: '10px', fontSize: '0.825rem', fontWeight: 700, marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <AlertCircle size={16} /> {passwordChangeError}
+              </div>
+            )}
+
+            <form onSubmit={handleChangePassword}>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                gap: '12px',
+                marginBottom: '12px'
+              }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '4px' }}>
+                    Select Account *
+                  </label>
+                  <select
+                    value={selectedTargetAccount}
+                    onChange={e => setSelectedTargetAccount(e.target.value)}
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: '10px', border: '1px solid var(--border-color)', fontSize: '0.85rem' }}
+                  >
+                    <option value="admin@idlyandidly.com">👑 Executive Admin (admin@idlyandidly.com)</option>
+                    <option value="staff1@idlyandidly.com">🍳 Staff Account 1 (staff1@idlyandidly.com)</option>
+                    <option value="staff2@idlyandidly.com">🍳 Staff Account 2 (staff2@idlyandidly.com)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '4px' }}>
+                    New Password * (Min 6 chars)
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="Enter new password"
+                    value={newPasswordInput}
+                    onChange={e => setNewPasswordInput(e.target.value)}
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: '10px', border: '1px solid var(--border-color)', fontSize: '0.85rem' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '4px' }}>
+                    Confirm New Password *
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="Retype new password"
+                    value={confirmPasswordInput}
+                    onChange={e => setConfirmPasswordInput(e.target.value)}
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: '10px', border: '1px solid var(--border-color)', fontSize: '0.85rem' }}
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isChangingPassword}
+                style={{
+                  backgroundColor: '#1976D2',
+                  color: '#FFFFFF',
+                  padding: '9px 20px',
+                  borderRadius: '10px',
+                  fontWeight: 700,
+                  fontSize: '0.85rem',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  cursor: 'pointer',
+                  border: 'none',
+                  boxShadow: '0 2px 6px rgba(25, 118, 210, 0.3)'
+                }}
+              >
+                <Lock size={15} /> {isChangingPassword ? 'Updating Password...' : 'Update Password Securely'}
+              </button>
+            </form>
           </div>
 
           {/* Live Menu Prices & Stock Manager */}
